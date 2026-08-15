@@ -26,6 +26,7 @@ jobs:
   build:
     name: wasm-opt ${{ matrix.variant }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
     strategy:
       fail-fast: false
       matrix:
@@ -61,20 +62,26 @@ jobs:
         shell: bash
         run: |
           set -eux
+          # Unbounded --parallel OOMs ubuntu-24.04-arm (SIGTERM) and evicts
+          # ubuntu-latest mid-link. Binaryen CXX units are large; 2 jobs
+          # fits the 7–16 GiB hosted runners. Skip third_party LLVM DWARF
+          # (not needed for --asyncify / -Oz).
           GEN=()
           if [ "${{ runner.os }}" != "Windows" ]; then
-            GEN+=(-DCMAKE_BUILD_TYPE=Release)
+            GEN+=(-G Ninja -DCMAKE_BUILD_TYPE=Release)
           fi
           cmake -S binaryen -B binaryen-cmake \
             -DENABLE_WERROR=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_TOOLS=ON \
+            -DBUILD_LLVM_DWARF=OFF \
+            -DBUILD_SHARED_LIBS=OFF \
             ${{ matrix.cmake_extra }} \
             "${GEN[@]}"
           if [ "${{ runner.os }}" = "Windows" ]; then
-            cmake --build binaryen-cmake --target wasm-opt --config Release --parallel
+            cmake --build binaryen-cmake --target wasm-opt --config Release --parallel 2
           else
-            cmake --build binaryen-cmake --target wasm-opt --parallel
+            cmake --build binaryen-cmake --target wasm-opt --parallel 2
           fi
 
       - name: Package
