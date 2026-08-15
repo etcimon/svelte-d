@@ -5,12 +5,12 @@ id: svelte-D
 kind: original-design-workspace
 purpose: SvelteKit-class D/vibe.0 compiler → Pegged IR → svelte-engine-ws → libwasm and/or vibe.0
 status: Draft 2026-08-14 (D host)
-green_command: dub build (packages/svelte-d) && bun test (packages/svelte-kit-d) && svelte-d wasm --ws --probes && svelte-d host --ws
+green_command: bun install && bun test && bunx svelte-d version
 does_not_change: libwasm, vibe.0, slideshow3dai, LDC
 host_policy: tracked tier-T MIT (owner 2026-08-14); do not add /svelte-D/ to ../.gitignore; do not silently edit ../.gitignore or ../AGENTS-todo.md
 ```
 
-**Is:** architecture notes + a DUB package at `packages/svelte-d/` (vibe.0 + Pegged + libdparse) that **compiles to an importable TS + exe + dynamic lib** (`import … from 'svelte-d'` in a bun project).  
+**Is:** architecture notes + the **`svelte-d` bun package at this repo root** (D compiler under `packages/svelte-d/`: vibe.0 + Pegged + libdparse). `bun install` / `bun run build` produces the native CLI; `import … from 'svelte-d'` works in a SvelteKit bun project.  
 **Is not:** a Svelte-to-JS wrapper, a second DOM/HTTP stack, or a sibling `../svelte-d/` directory.
 
 **Guiding principles:**
@@ -28,6 +28,7 @@ Canonical long-form design (Key Decisions, alternatives, security, full PR plan)
 | If the next change is about… | Open |
 |---|---|
 | What svelte-D is / is not / host git policy | [`README.md`](README.md) |
+| bun package, CLI build, include in a SvelteKit app | [`architecture/package.md`](architecture/package.md), [`README.md`](README.md) |
 | License of this work **and** of D/LDC/libwasm/vibe.0/Svelte/Binaryen/asyncify | [`LICENSE.md`](LICENSE.md), [`architecture/licensing.md`](architecture/licensing.md) |
 | End-to-end compile + runtime journey | [`architecture/overview.md`](architecture/overview.md) |
 | IR, hashes, `.svelte-d/` cache, incremental cones | [`architecture/ir.md`](architecture/ir.md) |

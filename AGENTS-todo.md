@@ -438,3 +438,6 @@ Pegged `asModule` vs scan; HMR port 3579 vs 3001; `bun install` in ws for Vite; 
 | 2026-08-14 | G112 | {#if few.n > 0 && !on} sync_fews_on; Flip shows first few |
 | 2026-08-14 | G113 | ComboIfCmp 10-case table; generic IR + live Flip |
 | 2026-08-14 | G114 | coverage-plan 10 suites; EACH_IF_BOOL + HOST_IF tables |
+| 2026-08-14 | pack | svelte-engine packaged in svelte-d; drop → svelte-engine-ws; isolated bun import |
+| 2026-08-15 | libwasm | engine dub.sdl uses ~master + git fetch; add-local checkout wins |
+| 2026-08-15 | pkg | repo-root svelte-d package; bun install builds CLI; GHA CI |

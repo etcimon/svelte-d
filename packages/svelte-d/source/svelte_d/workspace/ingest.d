@@ -10,6 +10,17 @@ import std.file;
 import std.path;
 import std.string : replace;
 
+/// Bun + SvelteKit project (`src/routes` or `src-svelte`) to ingest on compile.
+string detectKitProject(string start = null)
+{
+	auto p = start.length ? start : getcwd();
+	if (exists(buildPath(p, "src", "routes")) && isDir(buildPath(p, "src", "routes")))
+		return p;
+	if (exists(buildPath(p, "src-svelte")) && isDir(buildPath(p, "src-svelte")))
+		return p;
+	return "";
+}
+
 /// Project kit root: `src/` (SvelteKit) or `src-svelte/` (ws-shaped).
 string projectKitRoot(string project)
 {

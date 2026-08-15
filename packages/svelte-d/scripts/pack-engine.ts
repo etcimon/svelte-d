@@ -1,16 +1,18 @@
 // Copyright (c) 2026 Etienne Cimon
 // SPDX-License-Identifier: MIT
 //
-// Copy the svelte-engine *runtime bootstrap* into this package so
-// `svelte-d drop-ws` does not need a sibling riscv-dev/svelte-engine.
-// Skips build artifacts, node_modules, wasm/exe, and app-only admin routes.
+// Copy the svelte-engine *runtime bootstrap* into this package so a
+// `node_modules/svelte-d` install can drop/compile without a sibling
+// checkout. Canonical dest is svelte-d/svelte-engine; templates/engine
+// stays as the legacy name. Skips build artifacts, node_modules, wasm/exe,
+// and app-only admin routes.
 import { cpSync, existsSync, mkdirSync, readdirSync, rmSync, statSync, writeFileSync } from 'node:fs'
 import { dirname, join, relative, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const pkg = resolve(here, '..')
-const dest = join(pkg, 'templates', 'engine')
+const dests = [join(pkg, 'svelte-engine'), join(pkg, 'templates', 'engine')]
 
 function findEngine(start: string): string {
   let p = start
@@ -70,10 +72,16 @@ function walkCopy(fromDir: string, out: string, engineRoot: string) {
 }
 
 const src = findEngine(resolve(pkg, '..', '..'))
-if (existsSync(dest)) rmSync(dest, { recursive: true, force: true })
-walkCopy(src, dest, src)
-writeFileSync(
-  join(dest, '.svelte-d-bootstrap'),
-  'svelte-d packaged svelte-engine bootstrap\n'
-)
-console.log('packed', src, '->', dest)
+for (const dest of dests) {
+  if (resolve(src) === resolve(dest)) {
+    console.log('skip packing', dest, '(same as source)')
+    continue
+  }
+  if (existsSync(dest)) rmSync(dest, { recursive: true, force: true })
+  walkCopy(src, dest, src)
+  writeFileSync(
+    join(dest, '.svelte-d-bootstrap'),
+    'svelte-d packaged svelte-engine bootstrap\n'
+  )
+  console.log('packed', src, '->', dest)
+}

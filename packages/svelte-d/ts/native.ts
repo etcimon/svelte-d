@@ -3,7 +3,7 @@
 import { existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dlopen, FFIType, suffix } from 'bun:ffi'
-import { nativeExe, nativeLib, workspaceDir } from './paths.ts'
+import { kitProjectDir, nativeExe, nativeLib, workspaceDir } from './paths.ts'
 
 export type Via = 'ffi' | 'exe' | 'auto'
 
@@ -52,7 +52,7 @@ function runExe(args: string[]): RunResult {
   const exe = nativeExe()
   if (!existsSync(exe)) {
     throw new Error(
-      `svelte-d exe missing at ${exe} — dub build --config=application --compiler=ldc2`
+      `svelte-d exe missing at ${exe} — bun run build (ldc2 + dub) or dub build --config=application --compiler=ldc2`
     )
   }
   const r = spawnSync(exe, args, { encoding: 'utf8', shell: false })
@@ -98,6 +98,7 @@ export function compileWorkspace(
     if (wsOrOpts.project) project = wsOrOpts.project
     if (wsOrOpts.via) v = wsOrOpts.via
   }
+  if (!project) project = kitProjectDir()
   if (useFfi(v) && ffi && !project) {
     const status = ffi.svelte_d_compile(Buffer.from(dest + '\0'))
     return { status, stdout: '', stderr: '', via: 'ffi' }

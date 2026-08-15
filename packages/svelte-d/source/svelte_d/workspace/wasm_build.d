@@ -67,6 +67,20 @@ bool wasmArtifactStale(string ws)
 	return newestWasmInput(ws) > timeLastModified(art);
 }
 
+/// Prefer the live checkout over `dub fetch` of github.com/etcimon/libwasm master.
+void ensureLibwasmAddLocal()
+{
+	auto root = findLibwasmCheckout();
+	if (!root.length)
+		return;
+	execute(["dub", "remove-local", root], null, Config.none);
+	auto r = execute(["dub", "add-local", root, "~master"], null, Config.none);
+	if (r.status == 0)
+		writeln("wasm: dub add-local ", root, " ~master");
+	else
+		stderr.writeln("wasm: add-local failed: ", r.output);
+}
+
 /// 0 = built or skipped (fresh), 2 = dub/IR failed, 3 = wasm LDC missing.
 int buildWasmCell(string ws, string config = "application", bool force = false)
 {
@@ -75,6 +89,7 @@ int buildWasmCell(string ws, string config = "application", bool force = false)
 		stderr.writeln("wasm: no dub.sdl in ", ws, " (drop-ws first)");
 		return 2;
 	}
+	ensureLibwasmAddLocal();
 	auto ldc = findWasmLdc();
 	if (!ldc.length)
 	{

@@ -18,6 +18,12 @@ import svelte_d.print.kit_router;
 import svelte_d.workspace.wasm_build;
 import svelte_d.workspace.host_build;
 
+/// Compile dest is always svelte-engine-ws, never the engine template.
+string wsOrDefault(string ws, string root)
+{
+	return ws.length ? ws : defaultWorkspaceDir(root);
+}
+
 void usage()
 {
 	writeln("svelte-d — SvelteKit → libwasm / vibe.0 in svelte-engine-ws");
@@ -118,8 +124,7 @@ int main(string[] args)
 			string ws;
 			getopt(args, "ws", &ws);
 			auto root = findRiscvDev();
-			if (ws.length == 0)
-				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			ws = wsOrDefault(ws, root);
 			auto src = buildPath(ws, "src-svelte");
 			foreach (k; walkKit(src))
 				writeln(k.kind, "\t", k.path);
@@ -132,8 +137,7 @@ int main(string[] args)
 			string[] only;
 			getopt(args, "ws", &ws, "project", &project, "only", &only);
 			auto root = findRiscvDev();
-			if (ws.length == 0)
-				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			ws = wsOrDefault(ws, root);
 			return compileWorkspace(ws, project, only);
 		}
 		if (cmd == "map")
@@ -159,8 +163,7 @@ int main(string[] args)
 			string ws;
 			getopt(args, "ws", &ws);
 			auto root = findRiscvDev();
-			if (ws.length == 0)
-				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			ws = wsOrDefault(ws, root);
 			writeBootstrapFile(ws, templateDir(root));
 			writeln(bootstrapDocument(ws, templateDir(root)));
 			return verifyBootstrap(ws);
@@ -170,8 +173,7 @@ int main(string[] args)
 			string ws;
 			getopt(args, "ws", &ws);
 			auto root = findRiscvDev();
-			if (ws.length == 0)
-				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			ws = wsOrDefault(ws, root);
 			foreach (r; collectKitRoutes(buildPath(ws, "src-svelte")))
 				writeln(r.pattern, "\t", r.kitRel, "\t", r.srcD);
 			return 0;
@@ -191,8 +193,7 @@ int main(string[] args)
 			bool force;
 			getopt(args, "ws", &ws, "probes", &probes, "force", &force);
 			auto root = findRiscvDev();
-			if (ws.length == 0)
-				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			ws = wsOrDefault(ws, root);
 			auto st = buildWasmCell(ws, "application", force);
 			if (st != 0)
 				return st;
@@ -205,8 +206,7 @@ int main(string[] args)
 			string ws;
 			getopt(args, "ws", &ws);
 			auto root = findRiscvDev();
-			if (ws.length == 0)
-				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			ws = wsOrDefault(ws, root);
 			return buildHostCell(ws);
 		}
 		if (cmd == "version")

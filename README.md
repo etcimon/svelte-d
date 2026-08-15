@@ -1,6 +1,53 @@
-# svelte-D
+# svelte-d
 
-A **design workspace** plus a **D compiler** (`packages/svelte-d/`) for a SvelteKit-class stack that emits **D**. The compiler is a vibe.0 program (host cell) that also **builds as an importable TS + exe + dynamic lib** (`import { compileWorkspace, mapKitPath } from 'svelte-d'`). It parses Svelte with **Pegged** (same split as `libwasm/webidl/webidl-grammar`) and D with **libdparse** (serve-d is the IDE, not a link). It drops the **`svelte-engine` submodule** as **`svelte-engine-ws`** and compiles the app inside that workspace.
+This **repository root is the `svelte-d` package**. A bun + Svelte / SvelteKit project depends on it, `bun install` **builds the native CLI**, and `import { compileWorkspace, dropWorkspace } from 'svelte-d'` compiles kit sources into a dropped `svelte-engine-ws`.
+
+The compiler is a vibe.0 program (host cell) plus TypeScript exports. It parses Svelte with **Pegged** and D with **libdparse**. It drops the **`svelte-engine`** bootstrap and compiles the app inside that workspace — not a Svelte-to-JS wrap, not a second DOM/HTTP stack.
+
+## BUILD
+
+Host cell only: **LDC 1.42** + `dub` on PATH. In a riscv-dev tree: `. .\setenv.ps1`. Do not use `setenv-wasm.ps1` here.
+
+```powershell
+git clone --recurse-submodules https://github.com/etcimon/svelte-d.git
+cd svelte-d
+
+bun install              # prepare → pack engine if needed + dub build → packages/svelte-d/bin/svelte-d
+bun run build            # rebuild the CLI
+bunx svelte-d version    # prints 1
+bun test                 # package + import + bootstrap
+```
+
+`bun install` in a **consumer** SvelteKit app that depends on this repo runs the same `prepare` script, so `node_modules/.bin/svelte-d` / `bunx svelte-d` works after install (that machine still needs `ldc2` + `dub`).
+
+## Use in a Svelte / SvelteKit bun project
+
+```powershell
+bun add github:etcimon/svelte-d
+```
+
+```json
+{
+  "dependencies": { "svelte-d": "github:etcimon/svelte-d" }
+}
+```
+
+```ts
+import { dropWorkspace, compileWorkspace, workspaceDir } from 'svelte-d'
+
+const ws = workspaceDir()
+dropWorkspace({ dest: ws, force: true })
+compileWorkspace({ ws, project: process.cwd() }) // ingest src/routes + src/lib
+```
+
+Or the CLI:
+
+```powershell
+bunx svelte-d drop-ws --force
+bunx svelte-d compile --project .
+```
+
+`compile` infers `--project` when cwd has `src/routes`. Output is **`svelte-engine-ws`**, never the packaged `svelte-engine/`. See [`architecture/package.md`](architecture/package.md).
 
 Clone with the engine:
 

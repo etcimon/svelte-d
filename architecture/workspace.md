@@ -2,14 +2,16 @@
 
 The next change that writes generated D into `svelte-engine/` itself, or invents a third app layout, should read this and then write into **svelte-engine-ws**.
 
-`../svelte-engine/` is the **source** of the runtime bootstrap. It is packed
-into **`packages/svelte-d/templates/engine`** (`bun scripts/pack-engine.ts`)
-and **that packaged tree is what `drop-ws` copies**. A bun + svelte-d
-consumer does not need a sibling `riscv-dev/svelte-engine` checkout: the
-engine ships inside svelte-d. The compiler must **not** mutate the packaged
-engine (or `../svelte-engine/`) **while compiling an app**. App Svelte /
-SvelteKit lives in the bun project `src/` and is **ingested** onto the
-dropped workspace (`compile --project`).
+`svelte-engine/` is the **source** of the runtime bootstrap. `bun scripts/pack-engine.ts`
+copies it into **`packages/svelte-d/svelte-engine`** (and `templates/engine` as the
+legacy name). A bun + svelte-d consumer does not need a sibling checkout: after
+`bun install`, the engine lives at **`node_modules/svelte-d/svelte-engine`**. `drop-ws`
+copies that tree to **`svelte-engine-ws`** next to it (`node_modules/svelte-d/svelte-engine-ws`
+when the host is the installed package; sibling of the checkout in a riscv-dev /
+svelte-D tree). The compiler must **not** mutate the packaged engine (or the
+submodule) **while compiling an app**. App Svelte / SvelteKit lives in the bun
+project `src/` and is **ingested** onto the dropped workspace (`compile --project`,
+or automatically when cwd has `src/routes`).
 
 Accommodation goldens (`src-svelte/lib/Combo*.svelte`, `Panel.svelte`) stay
 in the bootstrap so printer tests have an idiom library. **Application**
@@ -23,7 +25,10 @@ trees (admin panel, site routes) belong in the project, not in the engine.
 svelte-d drop-ws [--dest <path>]
 ```
 
-Default dest: `riscv-dev/svelte-engine-ws` (sibling of the template; **not** `packages/svelte-d/`, **not** inside the template). Copy file-by-file from `svelte-engine/`, excluding `.dub`, `node_modules`, `*.exe`, `*.pdb`, `*.wasm`, `webserver/certs` private keys if a later pass says so (v1 may copy certs; they are already in the template).
+Default dest: next to the engine host — `svelte-engine-ws` beside a checkout, or
+`node_modules/svelte-d/svelte-engine-ws` when svelte-d is the installed package
+(**not** inside `svelte-engine/` itself). Copy file-by-file from the packaged
+`svelte-engine/`, excluding `.dub`, `node_modules`, `*.exe`, `*.pdb`, `*.wasm`.
 
 If dest exists and looks like an engine root: require `--force`. `--force` **clears sources** but **keeps** `node_modules`, `.dub`, and `.git` so a leftover Vite cannot fail `rmdirRecurse` with “file in use”. An empty leftover dest (failed prior drop) is reused without `--force`. Locked individual files are skipped and logged.
 
@@ -45,13 +50,14 @@ The template is the golden. IR experiments must not destroy it. slideshow3dai st
 
 ## Loci
 
-`../svelte-engine/` — template  
-`../svelte-engine/src-d/` — target D shape  
-`../svelte-engine/src-svelte/` — target Svelte+D shape  
-`../svelte-engine/dub.sdl` — wasm-eh default  
-`../svelte-engine/webserver/` — vibe.0 host  
-`packages/svelte-d/templates/engine` — packaged drop payload  
-`packages/svelte-d/scripts/pack-engine.ts` — sync from `../svelte-engine/`  
+`svelte-engine/` — template (submodule at repo root; packaged copy inside svelte-d)  
+`svelte-engine/src-d/` — target D shape  
+`svelte-engine/src-svelte/` — target Svelte+D shape  
+`svelte-engine/dub.sdl` — wasm-eh default; libwasm is `~master` from `github.com/etcimon/libwasm` (local `dub add-local`, else fetch)  
+`svelte-engine/webserver/` — vibe.0 host  
+`packages/svelte-d/svelte-engine` — packaged drop payload (`node_modules/svelte-d/svelte-engine`)  
+`packages/svelte-d/templates/engine` — legacy packaged name  
+`packages/svelte-d/scripts/pack-engine.ts` — sync from the svelte-engine submodule  
 `packages/svelte-d/source/svelte_d/workspace/drop.d` — drop implementation  
 `packages/svelte-d/source/svelte_d/workspace/ingest.d` — project `src/` overlay  
 
@@ -68,4 +74,4 @@ A new template (e.g. spa-only) is a second bootstrap dir + a `--template` flag, 
 
 ## Did not close
 
-Whether dest defaults to sibling `svelte-engine-ws` or `<cwd>/svelte-engine-ws`. Recommendation: sibling of the template when invoked from `riscv-dev/`, else `<cwd>/svelte-engine-ws`. Whether certs/keys are copied (recommendation: copy in v1; document they are template secrets).
+Dest is sibling `svelte-engine-ws` of a checkout, or `node_modules/svelte-d/svelte-engine-ws` when the host is the installed package. Certs/keys are not packed.

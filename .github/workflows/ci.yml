@@ -1,0 +1,42 @@
+name: CI
+
+on:
+  push:
+    branches: [master]
+  pull_request:
+    branches: [master]
+
+jobs:
+  test:
+    name: bun install + CLI + tests
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: LDC (host cell)
+        uses: dlang-community/setup-dlang@v1
+        with:
+          compiler: ldc-1.42.0
+
+      - name: Build CLI (bun install prepare)
+        run: bun install
+        env:
+          SVELTE_D_FORCE_BUILD: '1'
+
+      - name: CLI version
+        run: bun bin/svelte-d.ts version
+
+      - name: Tests
+        run: bun run test

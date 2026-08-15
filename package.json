@@ -1,0 +1,57 @@
+{
+  "name": "svelte-d",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Svelte / SvelteKit → libwasm / vibe.0. bun install builds the svelte-d CLI.",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/etcimon/svelte-d.git"
+  },
+  "exports": {
+    ".": "./packages/svelte-d/ts/index.ts"
+  },
+  "types": "./packages/svelte-d/ts/index.ts",
+  "bin": {
+    "svelte-d": "./bin/svelte-d.ts"
+  },
+  "scripts": {
+    "prepare": "bun scripts/build-cli.ts",
+    "build": "bun scripts/build-cli.ts",
+    "pack-engine": "bun packages/svelte-d/scripts/pack-engine.ts",
+    "test": "bun test packages/svelte-kit-d/test/package-engine.test.ts packages/svelte-kit-d/test/import-library.test.ts packages/svelte-kit-d/test/bootstrap.test.ts packages/svelte-kit-d/test/cli-bin.test.ts"
+  },
+  "files": [
+    "bin",
+    "scripts",
+    "packages/svelte-d/ts",
+    "packages/svelte-d/source",
+    "packages/svelte-d/grammar",
+    "packages/svelte-d/dub.sdl",
+    "packages/svelte-d/dub.selections.json",
+    "packages/svelte-d/svelte-engine",
+    "packages/svelte-d/templates",
+    "architecture",
+    "AGENTS.md",
+    "README.md",
+    "LICENSE.md"
+  ],
+  "workspaces": [
+    "packages/svelte-d",
+    "packages/svelte-kit-d",
+    "packages/adapter-static",
+    "packages/adapter-libwasm-spa",
+    "packages/adapter-vibe0",
+    "packages/adapter-vibe0-proxy",
+    "packages/svelte-d-coverage",
+    "packages/svelte-d-kit-app",
+    "packages/svelte-d-kit-fs",
+    "packages/svelte-d-kit-host",
+    "packages/svelte-d-kit-env",
+    "packages/svelte-d-kit-admin"
+  ],
+  "engines": {
+    "bun": ">=1.1.0"
+  }
+}

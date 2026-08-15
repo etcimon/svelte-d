@@ -15,6 +15,7 @@
     "ts",
     "bin",
     "lib",
+    "svelte-engine",
     "templates"
   ],
   "engines": {

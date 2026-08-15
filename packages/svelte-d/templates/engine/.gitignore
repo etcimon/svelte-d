@@ -31,6 +31,9 @@ dist-ssr
 # D
 .exe
 .pdb
+*.exe
+*.pdb
+webserver/certs/
 *.zip
 .dub
 *.lock

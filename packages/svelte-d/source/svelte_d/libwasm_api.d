@@ -9,7 +9,8 @@ import std.algorithm : canFind, sort, uniq;
 import std.array : appender, array;
 import std.file : dirEntries, exists, SpanMode;
 import std.path : baseName, buildPath, stripExtension;
-import svelte_d.lodash_api : findLibwasmRoot, looksLikeLodash;
+import svelte_d.lodash_api : looksLikeLodash;
+import svelte_d.workspace.drop : findLibwasmRoot;
 
 immutable string[] coreTypes = [
 	"Handle", "Eval", "JsHandle", "JSON", "VarType",

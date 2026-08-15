@@ -1,3 +1,5 @@
+// Copyright (c) 2026 Etienne Cimon
+// SPDX-License-Identifier: MIT
 import { existsSync } from 'node:fs'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -9,10 +11,32 @@ function isEngineRoot(p: string): boolean {
   return existsSync(join(p, 'src-d', 'app.d')) && existsSync(join(p, 'dub.sdl'))
 }
 
+/** svelte-d package root: ships svelte-engine for drop/compile in node_modules. */
+export function isSvelteDPackage(p: string): boolean {
+  if (
+    existsSync(join(p, 'ts', 'index.ts')) &&
+    (isEngineRoot(join(p, 'svelte-engine')) ||
+      isEngineRoot(join(p, 'templates', 'engine')))
+  )
+    return true
+  // Repo root / github:etcimon/svelte-d install (exports point here).
+  return (
+    existsSync(join(p, 'packages', 'svelte-d', 'ts', 'index.ts')) &&
+    (isEngineRoot(join(p, 'svelte-engine')) ||
+      isEngineRoot(join(p, 'packages', 'svelte-d', 'svelte-engine')) ||
+      isEngineRoot(join(p, 'packages', 'svelte-d', 'templates', 'engine')))
+  )
+}
+
 function walkHasEngine(start: string): string {
   let p = resolve(start)
   for (let i = 0; i < 10; i++) {
-    if (existsSync(join(p, 'svelte-engine', 'AGENTS.md'))) return p
+    if (
+      existsSync(join(p, 'svelte-engine', 'AGENTS.md')) ||
+      isEngineRoot(join(p, 'svelte-engine')) ||
+      isSvelteDPackage(p)
+    )
+      return p
     const parent = dirname(p)
     if (parent === p) break
     p = parent
@@ -20,31 +44,38 @@ function walkHasEngine(start: string): string {
   return ''
 }
 
-/** Packaged svelte-engine bootstrap shipped inside svelte-d. */
+/** Packaged svelte-engine inside this svelte-d package (node_modules/svelte-d). */
 export function bundledTemplateDir(): string {
-  const a = resolve(pkgRoot, 'templates', 'engine')
-  if (isEngineRoot(a)) return a
+  const packaged = resolve(pkgRoot, 'svelte-engine')
+  if (isEngineRoot(packaged)) return packaged
+  const legacy = resolve(pkgRoot, 'templates', 'engine')
+  if (isEngineRoot(legacy)) return legacy
   return ''
 }
 
-/** Directory that contains `svelte-engine/` (this repo, or a riscv-dev host). */
+/** Directory that contains the drop-source engine (checkout, or this package). */
 export function findRiscvDev(start = process.cwd()): string {
   const fromCwd = walkHasEngine(start)
   if (fromCwd) return fromCwd
   const fromPkg = walkHasEngine(pkgRoot)
   if (fromPkg) return fromPkg
-  throw new Error('cannot find svelte-engine (no svelte-engine/AGENTS.md above cwd or package)')
+  if (bundledTemplateDir()) return pkgRoot
+  throw new Error(
+    'cannot find svelte-engine (no svelte-engine/ above cwd or in the svelte-d package)'
+  )
 }
 
 export function workspaceDir(root = findRiscvDev()) {
   const here = join(root, 'svelte-engine-ws')
   if (existsSync(here)) return here
+  // Installed package: drop next to the packaged engine, not into node_modules/.
+  if (isSvelteDPackage(root)) return here
   const beside = join(dirname(root), 'svelte-engine-ws')
   if (existsSync(beside)) return beside
   return here
 }
 
-/** Drop source: svelte-engine submodule first, else packaged templates/engine. */
+/** Drop source: live svelte-engine checkout, else the copy packaged with svelte-d. */
 export function templateDir(_root = findRiscvDev()) {
   const sub = join(_root, 'svelte-engine')
   if (isEngineRoot(sub)) return sub
@@ -53,23 +84,73 @@ export function templateDir(_root = findRiscvDev()) {
   return sub
 }
 
-/** libwasm checkout: env, walk, or riscv-compilers/libwasm next to the engine host. */
-export function findLibwasmRoot(start = findRiscvDev()): string {
+/** Bun + SvelteKit project to ingest on compile (`src/routes` or `src-svelte`). */
+export function kitProjectDir(start = process.cwd()): string {
+  if (existsSync(join(start, 'src', 'routes'))) return start
+  if (existsSync(join(start, 'src-svelte'))) return start
+  return ''
+}
+
+function isLibwasmRoot(p: string): boolean {
+  return existsSync(join(p, 'source', 'libwasm', 'dom.d'))
+}
+
+function isLibwasmDubCache(p: string): boolean {
+  const n = p.replace(/\\/g, '/')
+  return n.includes('/.dub/packages/') || n.includes('/dub/packages/')
+}
+
+/** Source checkout only (for `dub add-local ~master`). */
+export function findLibwasmCheckout(start = findRiscvDev()): string {
   const env = process.env.LIBWASM_ROOT
-  if (env && existsSync(join(env, 'source', 'libwasm', 'dom.d'))) return env
+  if (env && isLibwasmRoot(env) && !isLibwasmDubCache(env)) return env
   const seeds = [start, dirname(start), process.cwd(), pkgRoot]
   for (const seed of seeds) {
     let p = resolve(seed)
     for (let i = 0; i < 10; i++) {
       for (const cand of [join(p, 'libwasm'), join(p, 'riscv-compilers', 'libwasm')]) {
-        if (existsSync(join(cand, 'source', 'libwasm', 'dom.d'))) return cand
+        if (isLibwasmRoot(cand) && !isLibwasmDubCache(cand)) return cand
       }
       const parent = dirname(p)
       if (parent === p) break
       p = parent
     }
   }
-  throw new Error('cannot find libwasm (source/libwasm/dom.d)')
+  return ''
+}
+
+function findLibwasmInDubCache(): string {
+  const homes = [
+    process.env.DUB_HOME,
+    process.env.LOCALAPPDATA ? join(process.env.LOCALAPPDATA, 'dub') : '',
+    process.env.USERPROFILE ? join(process.env.USERPROFILE, '.dub') : '',
+    process.env.HOME ? join(process.env.HOME, '.dub') : '',
+  ].filter(Boolean) as string[]
+  for (const h of homes) {
+    const pkgs = join(h, 'packages')
+    for (const rel of [
+      join('libwasm', '~master', 'libwasm'),
+      join('libwasm', 'master', 'libwasm'),
+      join('libwasm', '0.10.0', 'libwasm'),
+    ]) {
+      const cand = join(pkgs, rel)
+      if (isLibwasmRoot(cand)) return cand
+    }
+  }
+  return ''
+}
+
+/** libwasm: live checkout, else the fetched DUB copy of etcimon/libwasm master. */
+export function findLibwasmRoot(start = findRiscvDev()): string {
+  const env = process.env.LIBWASM_ROOT
+  if (env && isLibwasmRoot(env)) return env
+  const checkout = findLibwasmCheckout(start)
+  if (checkout) return checkout
+  const cached = findLibwasmInDubCache()
+  if (cached) return cached
+  throw new Error(
+    'cannot find libwasm (source/libwasm/dom.d; set LIBWASM_ROOT or dub fetch)'
+  )
 }
 
 export function nativeExe(): string {

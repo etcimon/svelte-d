@@ -25,9 +25,12 @@ export {
 export {
   findRiscvDev,
   findLibwasmRoot,
+  findLibwasmCheckout,
   workspaceDir,
   templateDir,
   bundledTemplateDir,
+  isSvelteDPackage,
+  kitProjectDir,
   nativeExe,
   nativeLib,
   nativeArtifacts,

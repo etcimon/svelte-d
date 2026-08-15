@@ -57,6 +57,8 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 	auto tpl = templateDir(root);
 	if (!exists(ws))
 		dropWorkspace(ws, tpl, false);
+	if (!project.length)
+		project = detectKitProject();
 	if (project.length)
 		ingestProject(project, ws);
 	auto srcSvelte = buildPath(ws, "src-svelte");

@@ -16,6 +16,6 @@ dub run --compiler=ldc2 -- drop-ws --force
 dub run --compiler=ldc2 -- scan --ws ..\..\..\svelte-engine-ws
 ```
 
-A bun project depends on `"svelte-d": "file:../svelte-d"` and `import { compileWorkspace, mapKitPath, adaptWorkspace } from 'svelte-d'`. Adapters (`adapter-static`, `adapter-libwasm-spa`, `adapter-vibe0`, `adapter-vibe0-proxy`) call `adaptWorkspace` and write `out/adapter.json`.
+A bun project depends on `"svelte-d"` and `import { compileWorkspace, dropWorkspace, mapKitPath, adaptWorkspace } from 'svelte-d'`. The package **ships `svelte-engine/`** (`bun scripts/pack-engine.ts`). After `bun install`, drop copies `node_modules/svelte-d/svelte-engine` → `node_modules/svelte-d/svelte-engine-ws` (or the checkout sibling in this repo). `compile` then ingest the project's `src/` Svelte / SvelteKit (`--project`, or automatically when cwd has `src/routes`). Adapters (`adapter-static`, `adapter-libwasm-spa`, `adapter-vibe0`, `adapter-vibe0-proxy`) call `adaptWorkspace` and write `out/adapter.json`.
 
 See `../../architecture/` (fallthrough.md, pegged-grammar.md, workspace.md, compiler-host.md).
