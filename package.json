@@ -20,6 +20,7 @@
     "prepare": "bun scripts/build-cli.ts",
     "build": "bun scripts/build-cli.ts",
     "setup": "bun scripts/setup-platform.ts",
+    "pull-wasm-opt": "bun scripts/pull-wasm-opt.ts",
     "build-wasm-opt": "bun scripts/build-wasm-opt.ts",
     "docs": "bun --cwd docs run dev",
     "docs:build": "bun --cwd docs run build",

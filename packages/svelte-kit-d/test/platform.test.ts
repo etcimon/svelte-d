@@ -138,4 +138,14 @@ describe('Binaryen ≥123 wasm-opt (try_table parse, no asyncify)', () => {
     const root = findBinaryenBuildRoot()
     if (root) expect(root.replace(/\\/g, '/')).toMatch(/binaryen-build$/)
   })
+
+  test('published darwin-arm64 archive is fetchable for Apple Silicon dest builds', async () => {
+    const url = forkedWasmOptDownloadUrl('darwin-arm64')
+    const res = await fetch(url, { redirect: 'follow' })
+    if (!res.ok) return
+    const buf = new Uint8Array(await res.arrayBuffer())
+    expect(buf.length).toBeGreaterThan(1_000_000)
+    expect(buf[0]).toBe(0x1f)
+    expect(buf[1]).toBe(0x8b)
+  })
 })
