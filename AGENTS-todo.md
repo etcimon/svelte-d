@@ -171,6 +171,10 @@ Do not put `lang="d"` into `src-ts/`. Do not put `lang="ts"` into `src-d/`. Do n
 | G118 | cmp leftovers | `!(n > 0)`, empty `{#each} zeds = []`, `n > lim` (item vs host) on `ComboIfCmp` | `dom.test.ts` + `lang-features.test.ts` |
 | G119 | await + fork EH | `wireAwait` prints `.await` + `libwasmAwaitFailed` (stock `.then` fallback); asyncify rewind-on-reject, export queue, `__svelteDRewriteError` | `await-asyncify.test.ts` + `wasm-eh.test.ts` + `admin.test.ts` |
 | G120 | wasm-opt CI | CI builds etcimon/binaryen wasm-opt for win/mac/linux; setup downloads into `binaryen-build/` like LDC 1.43; openssl 3.3.4 add-local for vibe-0 | `platform.test.ts` + `.github/workflows/wasm-opt.yml` |
+| G121 | await catch text | `{:catch e}` `{e}` filled from `libwasmAwaitError()` after rewind; stock `.error` notes the Any handle first. Do not wrap `.await` in `try` | `await-cases.ts` + `await-asyncify.test.ts` + `wasm-eh.test.ts` |
+| G122 | await then text | `{:then v}` `{v}` filled from `libwasmAwaitValue()` after rewind; stock `.then` notes the Any handle first | `await-cases.ts` + `await-asyncify.test.ts` |
+| G123 | multi-await wire | each `{#await}` job gets its own `wireAwait` block; first keeps `await_then` / `await_catch`; later jobs use `await_*_<job>` and snapshot `{e}`/`{v}` paths | `await-cases.ts` |
+| G124 | await bind uniquify | two `{:catch e}{e}` emit `eP` / `eP2` (unique field + struct); wire snapshots each path so both fills stay | `await-cases.ts` |
 
 Recorded limits: Pegged `mixin(grammar)` stack-overflows (use `grammar/sveltekit.peg` as spec + runtime scan). Template `comfyapi.d` / `dmaxminddb` stubbed. 1.43 wasm has no asyncify.
 
@@ -235,7 +239,7 @@ Printer emits the libwasm D IR ([udas.md](architecture/udas.md), [AGENTS-D-IR-li
 - Do **not** print `App.ready()` unless the Svelte has first-load work (missing `ready` keeps default `navigateTo`).
 - Wrap heavy `@connect` / list-rebuild / Lodash bodies in `ScopedPool(m_pool)` and copy survivors ([AGENTS-D-IR-memory-management.md](architecture/AGENTS-D-IR-memory-management.md)).
 - `{#if}` → `setVisible` / `remount` / `unmount`, not a second struct type.
-- **Yield:** wasm-eh `wireAwait` prints `.await` + `libwasmAwaitFailed()` when the fork asyncified the module, else `JsPromise.then`. A `try` must not wrap the import. Keep `--foptimize-nothrow=false` on that `dub.sdl`. See [AGENTS-D-IR-asyncify-wasm-eh.md](architecture/AGENTS-D-IR-asyncify-wasm-eh.md).
+- **Yield:** wasm-eh `wireAwait` prints `.await` + `libwasmAwaitFailed()` when the fork asyncified the module, else `JsPromise.then`. A rejected reason fills `{:catch e}` via `libwasmAwaitError()` after rewind; a resolve fills `{:then v}` via `libwasmAwaitValue()`. A `try` must not wrap the import. Keep `--foptimize-nothrow=false` on that `dub.sdl`. See [AGENTS-D-IR-asyncify-wasm-eh.md](architecture/AGENTS-D-IR-asyncify-wasm-eh.md).
 
 **T3-assemble (G16):**
 

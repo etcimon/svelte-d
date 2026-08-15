@@ -11,6 +11,7 @@ import { compileWorkspace, rewriteStack, loadDebugMap, WASM_ASYNCIFY_ARGS } from
 import { adminWorkspace } from '../src/ws.ts'
 import {
   formatAwaitReason,
+  formatAwaitValue,
   recordAwaitFail,
   recordAwaitOk,
   getLastAwait,
@@ -25,15 +26,21 @@ describe('admin await + asyncify glue', () => {
   test('await-status records reject without throwing across the import', () => {
     clearLastAwait()
     expect(getLastAwait().failed).toBe(false)
-    const ok = recordAwaitOk('_start')
+    const ok = recordAwaitOk('_start', 'ready')
     expect(ok.failed).toBe(false)
     expect(ok.exportName).toBe('_start')
+    expect(ok.value).toBe('ready')
+    expect(ok.reason).toBe('')
     const fail = recordAwaitFail(new Error('fetch failed'), 'domEvent')
     expect(fail.failed).toBe(true)
     expect(fail.reason).toMatch(/fetch failed/)
+    expect(fail.value).toBe('')
     expect(fail.exportName).toBe('domEvent')
     expect(formatAwaitReason('plain')).toBe('plain')
     expect(formatAwaitReason(null)).toBe('')
+    expect(formatAwaitValue('ok')).toBe('ok')
+    expect(formatAwaitValue(3)).toBe('3')
+    expect(formatAwaitValue({ a: 1 })).toBe('{"a":1}')
     expect(isAsyncifiedExports({ asyncify_get_state: () => 0 })).toBe(true)
     expect(isAsyncifiedExports({})).toBe(false)
     expect(isAsyncifiedExports(null)).toBe(false)
@@ -53,6 +60,10 @@ describe('admin await + asyncify glue', () => {
     const lib = readFileSync(join(root, 'libwasm.ts'), 'utf8')
     expect(lib).toContain('libwasm_await_supported')
     expect(lib).toContain('libwasm_await_failed')
+    expect(lib).toContain('libwasm_await_error')
+    expect(lib).toContain('libwasm_await_value')
+    expect(lib).toContain('libwasm_note_await_fail')
+    expect(lib).toContain('libwasm_note_await_ok')
     expect(lib).toContain('recordAwaitFail')
     expect(lib).not.toMatch(/promise\.finally\(\(\) => resolve\(null\)\)/)
     const ay = readFileSync(join(root, 'asyncify.ts'), 'utf8')
@@ -82,6 +93,16 @@ describe('admin await + asyncify glue', () => {
     expect(body).toContain('libwasmAwaitSupported()')
     expect(body).toMatch(/job\.await/)
     expect(body).toContain('libwasmAwaitFailed()')
+    expect(body).toContain('libwasmAwaitError()')
+    expect(body).toContain('eP.e =')
+    expect(body).toContain('libwasmNoteAwaitFail')
+    expect(body).toContain('libwasmAwaitValue()')
+    expect(body).toContain('vP.v =')
+    expect(body).toContain('libwasmNoteAwaitOk')
+    expect(body).toContain('other.await')
+    expect(body).toContain('await_pending_other')
+    expect(body).toContain('eP2.e =')
+    expect(body).toContain('vP2.v =')
     expect(body).toContain('.then(delegate void(Any _v)')
     expect(body).toContain('.error(delegate void(Any _e)')
     expect(body).not.toMatch(/try\s*\{\s*[\s\S]{0,40}job\.await/)

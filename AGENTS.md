@@ -68,7 +68,7 @@ Canonical long-form design (Key Decisions, alternatives, security, full PR plan)
 - Kit features are accommodated in svelte-engine / libwasm / vibe.0. svelte-d only prints that D IR. Compile integrates the engine as the ws bootstrap.
 - Printed wasm D is pool-correct: `ScopedPool` precedes `alloc`/`_d_allocmemory`/`allocString`; language `new` is bump-only; survivors are copied off the pool or allocated after `freeze`.
 - Printed D uses libwasm lifetime hooks (`construct` / `onMount` / `onUnmount` / App `ready`). One `Spa!App`. No Svelte JS `onMount`.
-- Stock Binaryen 123/132 cannot `--asyncify` `try_table`. The **etcimon/binaryen** fork (`binaryen/`, branch `svelte-d`) Flattens and asyncifies LDC wasm-eh. CI publishes those `wasm-opt` triples; `bunx svelte-d setup` downloads them into `binaryen-build/` like LDC 1.43. `run-probes.mjs` must keep `svelte_engine_eh_probe == 1` on that ship module. Printed EH IR is same-function `try`/`catch` (`throwBoundary`). `{#await}` `.await` must not be wrapped in `try`; catch is `libwasmAwaitFailed()` after rewind.
+- Stock Binaryen 123/132 cannot `--asyncify` `try_table`. The **etcimon/binaryen** fork (`binaryen/`, branch `svelte-d`) Flattens and asyncifies LDC wasm-eh. CI publishes those `wasm-opt` triples; `bunx svelte-d setup` downloads them into `binaryen-build/` like LDC 1.43. `run-probes.mjs` must keep `svelte_engine_eh_probe == 1` on that ship module. Printed EH IR is same-function `try`/`catch` (`throwBoundary`). `{#await}` `.await` must not be wrapped in `try`; catch is `libwasmAwaitFailed()` after rewind, and `{:catch e}` is filled from `libwasmAwaitError()`.
 
 ## Next change
 

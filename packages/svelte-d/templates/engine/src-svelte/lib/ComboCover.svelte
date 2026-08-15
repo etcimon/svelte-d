@@ -13,6 +13,7 @@
   bool open = false;
   Handle files;
   JsPromise!Any job;
+  JsPromise!Any other;
   void wipe() { extras = []; }
   void go() { this.update.await_then = true; }
   void fail() { this.update.await_catch = true; }
@@ -39,9 +40,16 @@
   {#await job}
     <p class="await-pend">Wait</p>
   {:then v}
-    <p class="await-then">Done</p>
+    <p class="await-then">{v}</p>
   {:catch e}
     <p class="await-catch">{e}</p>
+  {/await}
+  {#await other}
+    <p class="await2-pend">Wait2</p>
+  {:then v}
+    <p class="await2-then">{v}</p>
+  {:catch e}
+    <p class="await2-catch">{e}</p>
   {/await}
   <input class="bind-note" bind:value={note} />
   <span class="bind-note-out">{note}</span>

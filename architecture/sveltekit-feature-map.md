@@ -103,7 +103,7 @@ Parser input is Svelte/SvelteKit source. **Accommodation is not a svelte-d runti
 | `{#each}` | Implemented-by-mapping | `UnorderedList` / `List`. HMR `dumpApp`/`loadApp` serializes items as `:l:N:[{item}…]` (`hmr.d`); overlay `hmr-each` is info |
 | `{#key}` | Implemented-by-mapping | `remount!"child"(this)` helper when the key ident changes |
 | unnamed `<slot />` | Implemented-by-mapping | `mixin Slot!("default")` + fallback child |
-| `{#await}` | Implemented-by-mapping | pending/then/catch `@visible`; `wireAwait` is `.await` + `libwasmAwaitFailed()` on the fork, else `JsPromise.then`. Do not wrap the import. ([AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md)) |
+| `{#await}` | Implemented-by-mapping | pending/then/catch `@visible`; `wireAwait` is `.await` + `libwasmAwaitFailed()` on the fork, else `JsPromise.then`. `{:catch e}` is filled from `libwasmAwaitError()` after rewind. Do not wrap the import. ([AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md)) |
 | snippets / named slots | Implemented-by-mapping | `{#snippet}` stored; `{@render}` walks the body as `@child` |
 | `$state` (scalar / `string[]` only) | Implemented-by-mapping | v1 subset → struct field + `update` |
 | `$derived` | Implemented-by-mapping | peel `$derived(expr)` to `expr` (no rune runner) |

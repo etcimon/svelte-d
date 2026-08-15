@@ -77,6 +77,12 @@ describe('kit-admin compile: IR, debug-map, vibe.0 PG/Redis/JSON', () => {
     expect(cover).toContain('libwasmAwaitSupported()')
     expect(cover).toMatch(/job\.await/)
     expect(cover).toContain('libwasmAwaitFailed()')
+    expect(cover).toContain('libwasmAwaitError()')
+    expect(cover).toContain('eP.e =')
+    expect(cover).toContain('libwasmNoteAwaitFail')
+    expect(cover).toContain('libwasmAwaitValue()')
+    expect(cover).toContain('vP.v =')
+    expect(cover).toContain('libwasmNoteAwaitOk')
     expect(cover).toContain('.then(delegate void(Any _v)')
 
     const feat = readFileSync(join(ws, 'src-d', 'routes', 'admin', 'features', 'page.d'), 'utf8')

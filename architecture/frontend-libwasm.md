@@ -39,7 +39,7 @@ libwasm live HEAD `64a97ce` / `v0.10.0` (2026-08-14); `AGENTS.md` pin `02f21a6` 
 - Export list includes `_start`, `domEvent`, `allocString`, `dumpApp`, `loadApp`, `__heap_base` when HMR is on (`dub.sdl:36-37` on **ldc-1.36**; `:26-27` is the 1.43 `library` config). (construction)
 - Generated client `dub.sdl` must emit `subConfiguration "libwasm" "ldc-1.36"` (and helper sub-configs) when `wasmCell=ldc-1.36`. Do not copy slideshow3dai `application`. (construction)
 - Official Binaryen 123/132 must not `--asyncify` a `try_table` module (Flatten.cpp UNREACHABLE). The etcimon fork (`binaryen/`, `binaryen-build/`) does, then `-Oz`. Stock post-link stays `-Oz` / `-g -O0` with `--enable-exception-handling`. (construction)
-- Print `{#await}` as `wireAwait`: `.await` + `libwasmAwaitFailed()` when `asyncify_get_state` is present, else `JsPromise.then`. Do not wrap `.await` in `try`. `throwBoundary` stays a same-function landing pad off the import. ([AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md))
+- Print `{#await}` as `wireAwait`: `.await` + `libwasmAwaitFailed()` when `asyncify_get_state` is present, else `JsPromise.then`. Fill `{:catch e}` from `libwasmAwaitError()` and `{:then v}` from `libwasmAwaitValue()` after rewind. Do not wrap `.await` in `try`. `throwBoundary` stays a same-function landing pad off the import. ([AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md))
 - Do not invent a second handle table or a second `domEvent`. (construction of the ABI)
 - One generated file per component is convention (matches slideshow3dai). (convention)
 

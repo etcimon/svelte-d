@@ -7,7 +7,7 @@
 [![wasm-opt](https://github.com/etcimon/svelte-d/actions/workflows/wasm-opt.yml/badge.svg)](https://github.com/etcimon/svelte-d/actions/workflows/wasm-opt.yml)
 [![GitHub Pages](https://img.shields.io/badge/docs-GitHub%20Pages-222?logo=github)](https://etcimon.github.io/svelte-d/)
 
-The browser cell is **libwasm** (LDC 1.43 `try_table` wasm-eh). The server cell is **vibe.0**. There is no Svelte-to-JS wrap and no second DOM or HTTP stack. One **LDC 1.43+** builds the CLI, the wasm module, and the host exe. `{#await}` prints `.await` when the etcimon Binaryen fork asyncified the module; a rejected Promise is recorded and caught **after** rewind (`libwasmAwaitFailed`), never by wrapping the import in `try/catch`.
+The browser cell is **libwasm** (LDC 1.43 `try_table` wasm-eh). The server cell is **vibe.0**. There is no Svelte-to-JS wrap and no second DOM or HTTP stack. One **LDC 1.43+** builds the CLI, the wasm module, and the host exe. `{#await}` prints `.await` when the etcimon Binaryen fork asyncified the module; a rejected Promise is recorded and caught **after** rewind (`libwasmAwaitFailed` / `libwasmAwaitError`), never by wrapping the import in `try/catch`.
 
 ## Getting Started
 
@@ -61,7 +61,7 @@ bunx svelte-d build            # IR + wasm/host release
 
 `<script lang="d">` prints libwasm D. `<script lang="ts">` splices into `src-ts/modules` `jsExports`. Do not mix those cells.
 
-`{#await job}` is a `JsPromise` plus `wireAwait` in `App.ready`. On a fork-asyncified module that is `job.await` then `libwasmAwaitFailed()` (Svelte `{:catch}` visibility). Stock Binaryen 123/132 cannot `--asyncify` `try_table`; `wireAwait` then keeps `.then` / `.error`. Do not wrap `.await` in `try/catch` — `throwBoundary` stays a same-function landing pad off the import.
+`{#await job}` is a `JsPromise` plus `wireAwait` in `App.ready`. On a fork-asyncified module that is `job.await` then `libwasmAwaitFailed()` (Svelte `{:catch}` visibility); `{:catch e}` is filled from `libwasmAwaitError()`. Stock Binaryen 123/132 cannot `--asyncify` `try_table`; `wireAwait` then keeps `.then` / `.error` and notes the reject handle first. Do not wrap `.await` in `try/catch` — `throwBoundary` stays a same-function landing pad off the import.
 
 ## This repository
 

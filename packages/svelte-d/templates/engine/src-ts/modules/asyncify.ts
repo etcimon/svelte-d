@@ -158,7 +158,7 @@ export class Asyncify {
             this.value = await this.value;
             this.lastError = null;
             this.failed = false;
-            recordAwaitOk(exportName);
+            recordAwaitOk(exportName, this.value);
           } catch (e) {
             this.lastError = e;
             this.failed = true;

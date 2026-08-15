@@ -34,7 +34,14 @@ export const AWAIT_CASES: AwaitCase[] = [
   {
     id: 'then',
     dest: 'ComboCover',
-    needles: ['await_then = false', 'libwasmAwaitFailed()', '@style!"await-then"'],
+    needles: [
+      'await_then = false',
+      'libwasmAwaitFailed()',
+      '@style!"await-then"',
+      'libwasmAwaitValue()',
+      'vP.v =',
+      'libwasmNoteAwaitOk',
+    ],
     boot: 0,
     go: 1,
     fail: 0,
@@ -43,7 +50,14 @@ export const AWAIT_CASES: AwaitCase[] = [
   {
     id: 'catch',
     dest: 'ComboCover',
-    needles: ['await_catch = false', '@style!"await-catch"', 'string e'],
+    needles: [
+      'await_catch = false',
+      '@style!"await-catch"',
+      'string e',
+      'libwasmAwaitError()',
+      'eP.e =',
+      'libwasmNoteAwaitFail',
+    ],
     boot: 0,
     go: 0,
     fail: 1,
@@ -60,5 +74,21 @@ export const AWAIT_CASES: AwaitCase[] = [
     dest: 'ComboOr',
     needles: ['await_then = true', 'string e'],
     note: 'undeclared job then-first + catch {e}',
+  },
+  {
+    id: 'multi',
+    dest: 'ComboCover',
+    needles: [
+      'JsPromise!Any other',
+      'await_pending_other',
+      'await_then_other',
+      'await_catch_other',
+      'other.await',
+      'eP.e =',
+      'eP2.e =',
+      'vP.v =',
+      'vP2.v =',
+    ],
+    note: 'second {#await other} has its own flags; both {:catch e}{e} get unique eP/eP2',
   },
 ]

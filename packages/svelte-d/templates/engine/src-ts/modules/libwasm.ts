@@ -375,6 +375,21 @@ let jsExports = {
     libwasm_await_failed: () => {
       return getLastAwait().failed ? 1 : 0;
     },
+    // Sync status queries — stay off --asyncify-imports.
+    libwasm_await_error: (rawResult: number) => {
+      encoders.string(rawResult, getLastAwait().reason || '');
+    },
+    libwasm_await_value: (rawResult: number) => {
+      encoders.string(rawResult, getLastAwait().value || '');
+    },
+    libwasm_note_await_fail: (handle: number) => {
+      const s = recordAwaitFail(getObject(handle));
+      libwasm.lastExceptionMsg = s.reason;
+      libwasm.lastAwaitError = s.reason;
+    },
+    libwasm_note_await_ok: (handle: number) => {
+      recordAwaitOk('', getObject(handle));
+    },
     libwasm_await__void: async (handle: number) => {
       const ex = libwasm.instance && libwasm.instance.exports;
       if (!isAsyncifiedExports(ex)) {
@@ -398,7 +413,7 @@ let jsExports = {
       // D libwasmAwaitFailed() *after* the import — never thrown across it.
       try {
         const value = await promise;
-        recordAwaitOk();
+        recordAwaitOk('', value);
         return value ?? null;
       } catch (e) {
         const s = recordAwaitFail(e);

@@ -92,7 +92,7 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 		auto rel = relativePath(k.path, srcSvelte).replace("\\", "/");
 		if (!matchesOnly(rel, only))
 			continue;
-		enum printerPin = "g119";
+		enum printerPin = "g124";
 		auto srcSha = printerPin ~ ":" ~ shaFile(k.path);
 		if (k.path.extension == ".svelte")
 		{

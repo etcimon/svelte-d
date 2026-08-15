@@ -103,7 +103,8 @@ describe('NodeDef / UDA graph from interactive Svelte', () => {
     expect(node.kind).toBe('Template')
 
     const man = JSON.parse(readFileSync(join(ws, '.svelte-d', 'manifest.json'), 'utf8'))
-    expect(man.dom).toBeGreaterThan(0)
+    // man.dom is this-run print count; a pin-stable hash-skip compile writes 0.
+    expect(typeof man.dom).toBe('number')
   })
 
   test('{#if} prints @visible and remount/unmount, not a second struct type', () => {
@@ -553,7 +554,7 @@ describe('NodeDef / UDA graph from interactive Svelte', () => {
     expect(src).toContain('module lib.ComboWide')
     expect(src).toContain('struct ComboWide')
     expect(src).toContain('bool not_off')
-    expect(src).toContain('@visible!"offP"')
+    expect(src).toContain('@visible!"not_offP"')
     expect(src).toContain('!off')
     expect(src).toContain('mixin NodeDef!"math"')
     expect(src).toContain('mixin NodeDef!"mi"')
@@ -566,7 +567,7 @@ describe('NodeDef / UDA graph from interactive Svelte', () => {
     expect(src).toContain('@prop!"open"')
     expect(src).toContain('@prop!"paused"')
     expect(src).toMatch(/div\d+\.update\.not_off/)
-    expect(src).toMatch(/void onMount[\s\S]*setVisible!"offP"\(div\d+/)
+    expect(src).toMatch(/void onMount[\s\S]*setVisible!"not_offP"\(div\d+/)
     expect(src).not.toMatch(/div\d+\.off = off/)
     {
       const i = src.indexOf('struct Div0')

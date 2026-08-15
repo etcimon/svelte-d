@@ -30,6 +30,24 @@ struct DomPrint
 
 private int gSeq;
 
+/// One `{#await}` job to settle in `wireAwait`. First keeps
+/// `await_then` / `await_catch` so Combo Go/Fail still rewrite.
+private struct AwaitWire
+{
+	string job;
+	string pend;
+	string then;
+	string catchChild;
+	string catchName;
+	string thenName;
+	string recv;
+	string catchPath;
+	string thenPath;
+	string pendFlag;
+	string thenFlag;
+	string catchFlag;
+}
+
 private int originLine(string src, string needle)
 {
 	if (!src.length || !needle.length)
@@ -783,11 +801,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 		constructLines ~= "    addCss(\"" ~ escapeDString(cssText) ~ "\");";
 	string[] onMountLines;
 	string[] onMountTail;
-	string awaitWireJob;
-	string awaitWirePend;
-	string awaitWireThen;
-	string awaitWireCatch;
-	string awaitWireRecv;
+	AwaitWire[] awaitWires;
 	foreach (ln; runeMount)
 		onMountLines ~= ln;
 	string[string] bindThis; // host Handle field ← child fname
@@ -909,6 +923,35 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 		return null;
 	}
 
+	bool fieldTaken(string parent, string fname)
+	{
+		foreach (f; ownerFields(parent))
+			if (f == fname)
+				return true;
+		return false;
+	}
+
+	bool[string] usedStructs;
+
+	void takeStruct(string sname)
+	{
+		usedStructs[sname] = true;
+	}
+
+	/// Two `{:catch e}{e}` must not both emit `@child EP eP` / `struct EP`.
+	void uniquifyName(string parent, ref string fname, ref string sname)
+	{
+		auto baseF = fname;
+		auto baseS = sname;
+		int n = 2;
+		while (fieldTaken(parent, fname) || (sname in usedStructs))
+		{
+			fname = baseF ~ to!string(n);
+			sname = baseS ~ to!string(n);
+			n++;
+		}
+	}
+
 	auto origRel = srcRel.replace(`\`, `/`);
 	auto origSrc = scan.source;
 
@@ -943,6 +986,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			emitChildDecl(parentStruct, "  @child " ~ sname ~ " " ~ fname ~ ";\n");
 			mustacheChild[id] = htmlPath;
 			constructLines ~= "    " ~ htmlPath ~ "." ~ id ~ " = " ~ id ~ ";";
+			takeStruct(sname);
 			nested ~= "struct " ~ sname ~ "\n{\nnothrow:\n  @trusted:\n";
 			nested ~= "  @prop!\"innerHTML\" string " ~ id ~ ";\n";
 			nested ~= "  mixin NodeDef!\"div\";\n}\n";
@@ -1167,6 +1211,15 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			// .await in try/catch — landing pad stays off the import.
 			auto jobName = ident(n.text);
 			auto settleThen = !hostHasName(jobName) && !hostHasPromise(jobName);
+			string pendFlag = "await_pending";
+			string thenFlag = "await_then";
+			string catchFlag = "await_catch";
+			if (!settleThen && awaitWires.length)
+			{
+				pendFlag ~= "_" ~ jobName;
+				thenFlag ~= "_" ~ jobName;
+				catchFlag ~= "_" ~ jobName;
+			}
 			string pendChild, thenChild, catchChild;
 			auto before = ownerFields(parentStruct).length;
 			foreach (k; n.kids)
@@ -1177,7 +1230,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			{
 				pendChild = grown[before];
 				auto pendOn = n.kids.length && !settleThen;
-				auto line = "  @visible!\"" ~ pendChild ~ "\" bool await_pending = "
+				auto line = "  @visible!\"" ~ pendChild ~ "\" bool " ~ pendFlag ~ " = "
 					~ (pendOn ? "true" : "false") ~ ";\n";
 				if (onHost(parentStruct))
 					acc ~= line;
@@ -1194,7 +1247,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			{
 				thenChild = grown[t0];
 				auto thenOn = settleThen || !n.kids.length;
-				auto line = "  @visible!\"" ~ thenChild ~ "\" bool await_then = "
+				auto line = "  @visible!\"" ~ thenChild ~ "\" bool " ~ thenFlag ~ " = "
 					~ (thenOn ? "true" : "false") ~ ";\n";
 				if (onHost(parentStruct))
 					acc ~= line;
@@ -1210,7 +1263,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			if (grown.length > c0)
 			{
 				catchChild = grown[c0];
-				auto line = "  @visible!\"" ~ catchChild ~ "\" bool await_catch = false;\n";
+				auto line = "  @visible!\"" ~ catchChild ~ "\" bool " ~ catchFlag ~ " = false;\n";
 				if (onHost(parentStruct))
 					acc ~= line;
 				else
@@ -1223,38 +1276,51 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 				// child handle is in the JS table. Author settles with
 				// this.update.await_then after first paint (G92). App.ready
 				// calls wireAwait after render (G93).
-				awaitWireJob = jobName;
-				awaitWirePend = pendChild;
-				awaitWireThen = thenChild;
-				awaitWireCatch = catchChild;
-				awaitWireRecv = parentPath.length ? parentPath : "this";
+				AwaitWire w;
+				w.job = jobName;
+				w.pend = pendChild;
+				w.then = thenChild;
+				w.catchChild = catchChild;
+				w.catchName = ident(n.catchName);
+				w.thenName = ident(n.aliasName);
+				w.recv = parentPath.length ? parentPath : "this";
+				w.pendFlag = pendFlag;
+				w.thenFlag = thenFlag;
+				w.catchFlag = catchFlag;
+				if (w.thenName.length)
+					if (auto ch = w.thenName in mustacheChild)
+						w.thenPath = *ch;
+				if (w.catchName.length)
+					if (auto ch = w.catchName in mustacheChild)
+						w.catchPath = *ch;
+				awaitWires ~= w;
 				if (thenChild.length)
 				{
-					visibleChild["await_then"] = thenChild;
-					visSyncField["await_then"] = "await_then";
-					visSyncExpr["await_then"] = "await_then";
+					visibleChild[thenFlag] = thenChild;
+					visSyncField[thenFlag] = thenFlag;
+					visSyncExpr[thenFlag] = thenFlag;
 					if (pendChild.length)
-						elseMany["await_then"] ~= pendChild;
+						elseMany[thenFlag] ~= pendChild;
 					if (catchChild.length)
-						elseMany["await_then"] ~= catchChild;
+						elseMany[thenFlag] ~= catchChild;
 					if (parentPath.length)
-						visibleOwner["await_then"] = parentPath;
+						visibleOwner[thenFlag] = parentPath;
 				}
 				if (pendChild.length)
 				{
-					visibleChild["await_pending"] = pendChild;
-					visSyncField["await_pending"] = "await_pending";
-					visSyncExpr["await_pending"] = "await_pending";
+					visibleChild[pendFlag] = pendChild;
+					visSyncField[pendFlag] = pendFlag;
+					visSyncExpr[pendFlag] = pendFlag;
 				}
 				if (catchChild.length)
 				{
-					visibleChild["await_catch"] = catchChild;
-					visSyncField["await_catch"] = "await_catch";
-					visSyncExpr["await_catch"] = "await_catch";
+					visibleChild[catchFlag] = catchChild;
+					visSyncField[catchFlag] = catchFlag;
+					visSyncExpr[catchFlag] = catchFlag;
 					if (thenChild.length)
-						elseMany["await_catch"] ~= thenChild;
+						elseMany[catchFlag] ~= thenChild;
 					if (pendChild.length)
-						elseMany["await_catch"] ~= pendChild;
+						elseMany[catchFlag] ~= pendChild;
 				}
 			}
 			return;
@@ -1505,6 +1571,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 							&& a.value.length)
 						itemStatic ~= a.name ~ "=" ~ a.value;
 				}
+			takeStruct(item);
 			nested ~= "struct " ~ item ~ "\n{\nnothrow:\n  @trusted:\n";
 			foreach (i, cn; itemClassDirs)
 			{
@@ -1566,6 +1633,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 				"assignEventListeners", "Slot", "callback", "connect", "inject", "prop", "ScopedPool"];
 			if (listType.length)
 			{
+				takeStruct(listType);
 				nested ~= "struct " ~ listType ~ "\n{\nnothrow:\n  @trusted:\n";
 				nested ~= "  import libwasm.array;\n";
 				nested ~= "  @child HTMLArray!" ~ item ~ " items;\n";
@@ -1935,9 +2003,11 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			}
 			auto fname = "slot_" ~ ident(slotN);
 			auto sname = "Slot" ~ pascal(slotN);
+			uniquifyName(parentStruct, fname, sname);
 			addField(parentStruct, fname);
 			emitChildDecl(parentStruct, "  @child " ~ sname ~ " " ~ fname ~ ";\n");
 			acc ~= "  mixin Slot!\"" ~ slotField(slotN) ~ "\";\n";
+			takeStruct(sname);
 			nested ~= "struct " ~ sname ~ "\n{\nnothrow:\n  @trusted:\n";
 			foreach (ln; letNames)
 				if (ident(ln).length)
@@ -2171,6 +2241,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 		}
 		if (fname == "input" || fname == "module" || fname == "version")
 			fname = "el_" ~ fname;
+		uniquifyName(parentStruct, fname, sname);
 		addField(parentStruct, fname);
 		emitChildDecl(parentStruct, "  @child " ~ sname ~ " " ~ fname ~ ";\n");
 		auto thisPath = joinPath(parentPath, fname);
@@ -2209,6 +2280,7 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			r.udas ~= ["connect", "callback", "Slot", "ScopedPool", "inject"];
 		}
 
+		takeStruct(sname);
 		nested ~= "struct " ~ sname ~ "\n{\nnothrow:\n  @trusted:\n";
 		foreach (ln; letNames)
 			if (ident(ln).length)
@@ -2605,10 +2677,18 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			acc ~= "    " ~ s ~ "();\n";
 		acc ~= "  }\n";
 	}
-	if (awaitWireJob.length)
+	if (awaitWires.length)
 	{
-		auto recv = awaitWireRecv.length ? awaitWireRecv : "this";
-		string vis(string child, string flag, string val)
+		string bindFill(string path, string name, string helper)
+		{
+			auto id = ident(name);
+			if (!id.length || !path.length)
+				return "";
+			return "          auto _awb = " ~ helper ~ "();\n"
+				~ "          " ~ path ~ "." ~ id ~ " = _awb;\n"
+				~ "          " ~ path ~ ".update." ~ id ~ " = _awb;\n";
+		}
+		string vis(string recv, string child, string flag, string val)
 		{
 			if (!child.length)
 				return "";
@@ -2619,38 +2699,48 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 				~ ".node.handle.handle > 2 || " ~ val ~ ")\n"
 				~ "      setVisible!\"" ~ child ~ "\"(" ~ tgt ~ ", " ~ val ~ ");\n";
 		}
-		auto thenVis = vis(awaitWirePend, "await_pending", "false")
-			~ vis(awaitWireThen, "await_then", "true")
-			~ vis(awaitWireCatch, "await_catch", "false");
-		auto catchVis = vis(awaitWirePend, "await_pending", "false")
-			~ vis(awaitWireThen, "await_then", "false")
-			~ vis(awaitWireCatch, "await_catch", "true");
 		acc ~= "  void wireAwait() @trusted\n  {\n";
 		acc ~= "    import await_status;\n";
-		acc ~= "    if (" ~ awaitWireJob ~ ".handle.handle <= 2)\n    {\n";
-		acc ~= "      auto _awr = document().fonts().ready();\n";
-		acc ~= "      " ~ awaitWireJob ~ ".handle.handle = _awr.handle.handle;\n";
-		acc ~= "      _awr.handle.handle = 0;\n    }\n";
-		acc ~= "    if (" ~ awaitWireJob ~ ".handle.handle > 2)\n    {\n";
-		acc ~= "      if (libwasmAwaitSupported())\n      {\n";
-		acc ~= "        " ~ awaitWireJob ~ ".await;\n";
-		acc ~= "        if (libwasmAwaitFailed())\n        {\n";
-		acc ~= catchVis;
-		acc ~= "        }\n        else\n        {\n";
-		acc ~= thenVis;
-		acc ~= "        }\n";
-		acc ~= "      }\n      else\n      {\n";
-		acc ~= "        " ~ awaitWireJob ~ ".then(delegate void(Any _v) {\n";
-		acc ~= thenVis;
-		acc ~= "        });\n";
-		if (awaitWireCatch.length)
+		foreach (w; awaitWires)
 		{
-			acc ~= "        " ~ awaitWireJob ~ ".error(delegate void(Any _e) {\n";
+			auto recv = w.recv.length ? w.recv : "this";
+			auto thenVis = vis(recv, w.pend, w.pendFlag, "false")
+				~ vis(recv, w.then, w.thenFlag, "true")
+				~ vis(recv, w.catchChild, w.catchFlag, "false");
+			auto catchVis = vis(recv, w.pend, w.pendFlag, "false")
+				~ vis(recv, w.then, w.thenFlag, "false")
+				~ vis(recv, w.catchChild, w.catchFlag, "true");
+			auto catchFill = bindFill(w.catchPath, w.catchName, "libwasmAwaitError");
+			auto thenFill = bindFill(w.thenPath, w.thenName, "libwasmAwaitValue");
+			acc ~= "    if (" ~ w.job ~ ".handle.handle <= 2)\n    {\n";
+			acc ~= "      auto _awr = document().fonts().ready();\n";
+			acc ~= "      " ~ w.job ~ ".handle.handle = _awr.handle.handle;\n";
+			acc ~= "      _awr.handle.handle = 0;\n    }\n";
+			acc ~= "    if (" ~ w.job ~ ".handle.handle > 2)\n    {\n";
+			acc ~= "      if (libwasmAwaitSupported())\n      {\n";
+			acc ~= "        " ~ w.job ~ ".await;\n";
+			acc ~= "        if (libwasmAwaitFailed())\n        {\n";
+			acc ~= catchFill;
+			acc ~= catchVis;
+			acc ~= "        }\n        else\n        {\n";
+			acc ~= thenFill;
+			acc ~= thenVis;
+			acc ~= "        }\n";
+			acc ~= "      }\n      else\n      {\n";
+			acc ~= "        " ~ w.job ~ ".then(delegate void(Any _v) {\n";
+			acc ~= "          libwasmNoteAwaitOk(_v.handle.handle);\n";
+			acc ~= thenFill;
+			acc ~= thenVis;
+			acc ~= "        });\n";
+			acc ~= "        " ~ w.job ~ ".error(delegate void(Any _e) {\n";
+			acc ~= "          libwasmNoteAwaitFail(_e.handle.handle);\n";
+			acc ~= catchFill;
 			acc ~= catchVis;
 			acc ~= "        });\n";
+			acc ~= "      }\n";
+			acc ~= "    }\n";
 		}
-		acc ~= "      }\n";
-		acc ~= "    }\n  }\n";
+		acc ~= "  }\n";
 	}
 
 	// Author methods after fields + NodeDef. this.update.x is rewritten onto

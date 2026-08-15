@@ -9,12 +9,37 @@
 export type AwaitSettlement = {
   failed: boolean
   reason: string
+  value: string
   exportName: string
 }
 
-const empty: AwaitSettlement = { failed: false, reason: '', exportName: '' }
+const empty: AwaitSettlement = {
+  failed: false,
+  reason: '',
+  value: '',
+  exportName: '',
+}
 
 let last: AwaitSettlement = { ...empty }
+
+export function formatAwaitValue(v: unknown): string {
+  if (v == null) return ''
+  if (typeof v === 'string') return v
+  if (typeof v === 'number' || typeof v === 'boolean' || typeof v === 'bigint')
+    return String(v)
+  if (typeof v === 'function') return ''
+  try {
+    const s = JSON.stringify(v)
+    if (typeof s === 'string') return s
+  } catch {
+    /* circular */
+  }
+  try {
+    return String(v)
+  } catch {
+    return ''
+  }
+}
 
 export function formatAwaitReason(e: unknown): string {
   if (e == null) return ''
@@ -36,8 +61,16 @@ export function formatAwaitReason(e: unknown): string {
   }
 }
 
-export function recordAwaitOk(exportName = ''): AwaitSettlement {
-  last = { failed: false, reason: '', exportName }
+export function recordAwaitOk(
+  exportName = '',
+  value: unknown = ''
+): AwaitSettlement {
+  last = {
+    failed: false,
+    reason: '',
+    value: formatAwaitValue(value),
+    exportName,
+  }
   noteHost(last)
   return last
 }
@@ -49,6 +82,7 @@ export function recordAwaitFail(
   last = {
     failed: true,
     reason: formatAwaitReason(e),
+    value: '',
     exportName,
   }
   noteHost(last)

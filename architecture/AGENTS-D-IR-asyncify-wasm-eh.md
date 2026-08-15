@@ -97,7 +97,7 @@ These were in **libwasm’s** await/asyncify implementation and the engine copie
 
 ## What svelte-d must print (functionally memory- and yield-correct D IR)
 
-- **wasm-eh cell (default):** `wireAwait` prints `job.await` plus `libwasmAwaitFailed()` settle when asyncify is present; else `JsPromise.then` / `.error`. Sync D `try`/`catch` / `throwBoundary` in functions that never reach `libwasm_await__void` (navbar `onClick`, printed `throwBoundary`). The etcimon/binaryen fork asyncifies the **module** so those catches still run (`svelte_engine_eh_probe` == 1). Do not wrap `.await` in `try`.
+- **wasm-eh cell (default):** `wireAwait` prints `job.await` plus `libwasmAwaitFailed()` settle when asyncify is present; else `JsPromise.then` / `.error`. `{:catch e}` `{e}` is assigned from `libwasmAwaitError()` after rewind (stock `.error` calls `libwasmNoteAwaitFail` first). Sync D `try`/`catch` / `throwBoundary` in functions that never reach `libwasm_await__void` (navbar `onClick`, printed `throwBoundary`). The etcimon/binaryen fork asyncifies the **module** so those catches still run (`svelte_engine_eh_probe` == 1). Do not wrap `.await` in `try`.
 - **asyncify cells (1.36 / 1.42):** `.await` allowed in `@connect` / `onMount` / `ready` **without** a landing pad around the import. Wrap with `ScopedPool`; copy survivors before the await returns ([AGENTS-D-IR-memory-management.md](AGENTS-D-IR-memory-management.md), [AGENTS-D-IR-lifetime.md](AGENTS-D-IR-lifetime.md)).
 - Never print `.await` in `construct` / `compile!` / `_start` / `registerRoutes` / `throwBoundary`.
 - Never print Svelte `async` (v1 out of scope). `{#await}` *is* printed as `wireAwait`.
@@ -115,7 +115,7 @@ These were in **libwasm’s** await/asyncify implementation and the engine copie
 `svelte-engine/src-ts/modules/asyncify.ts` — `DATA_*`, `EXPORTED_FROM_D`, queue, rewind-on-reject  
 `svelte-engine/src-ts/modules/await-status.ts` — last-await flag  
 `svelte-engine/src-ts/modules/libwasm.ts` — `_start`, `libwasm_await__void` / `_supported` / `_failed`  
-`svelte-engine/src-d/await_status.d` — D view of those imports  
+`svelte-engine/src-d/await_status.d` — D view of those imports (`_supported` / `_failed` / `_error` / `_note`)  
 `svelte-engine/src-d/navbar.d:25-35` — sync `try`/`catch` (wasm-eh golden)  
 Binaryen `src/passes/{Flatten.cpp,Asyncify.cpp}`; issues #4470, #8372  
 
@@ -131,7 +131,7 @@ Binaryen `src/passes/{Flatten.cpp,Asyncify.cpp}`; issues #4470, #8372
 
 ## Extension points
 
-JSPI (`WebAssembly.promising`) would replace Binaryen Asyncify; that is a new glue ABI, not a printer flag. Filling `{:catch e}` from `libwasmAwaitError()` is a later printer increment (catch alias is now parsed as `MkNode.catchName`).
+JSPI (`WebAssembly.promising`) would replace Binaryen Asyncify; that is a new glue ABI, not a printer flag.
 
 ## Did not close
 
