@@ -64,8 +64,8 @@ jobs:
           set -eux
           # Unbounded --parallel OOMs ubuntu-24.04-arm (SIGTERM) and evicts
           # ubuntu-latest mid-link. Binaryen CXX units are large; 2 jobs
-          # fits the 7–16 GiB hosted runners. Skip third_party LLVM DWARF
-          # (not needed for --asyncify / -Oz).
+          # fits the 7–16 GiB hosted runners. Keep BUILD_LLVM_DWARF (suffix
+          # tree includes llvm/Support/Allocator.h even for wasm-opt).
           GEN=()
           if [ "${{ runner.os }}" != "Windows" ]; then
             GEN+=(-G Ninja -DCMAKE_BUILD_TYPE=Release)
@@ -74,7 +74,6 @@ jobs:
             -DENABLE_WERROR=OFF \
             -DBUILD_TESTS=OFF \
             -DBUILD_TOOLS=ON \
-            -DBUILD_LLVM_DWARF=OFF \
             -DBUILD_SHARED_LIBS=OFF \
             ${{ matrix.cmake_extra }} \
             "${GEN[@]}"
