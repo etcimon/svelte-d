@@ -110,13 +110,17 @@ void pinWasmToolchain(string ws)
 }
 
 /// 0 = built or skipped (fresh), 2 = dub/IR failed, 3 = wasm LDC missing.
-int buildWasmCell(string ws, string config = "application", bool force = false)
+/// `buildType` is DUB's debug (symbols) or release (optimize + lflags -strip-all).
+int buildWasmCell(string ws, string config = "application", bool force = false,
+	string buildType = "release")
 {
 	if (!exists(buildPath(ws, "dub.sdl")))
 	{
 		stderr.writeln("wasm: no dub.sdl in ", ws, " (drop-ws first)");
 		return 2;
 	}
+	if (buildType != "debug" && buildType != "release")
+		buildType = "release";
 	ensureLibwasmAddLocal();
 	pinWasmToolchain(ws);
 	auto ldc = findWasmLdc();
@@ -127,17 +131,18 @@ int buildWasmCell(string ws, string config = "application", bool force = false)
 	}
 	auto publicDir = buildPath(ws, "public");
 	mkdirRecurse(publicDir);
-	if (!force && !wasmArtifactStale(ws))
+	if (!force && !wasmArtifactStale(ws) && lastWasmBuildType(ws) == buildType)
 	{
 		writeln("wasm skip  dests unchanged (link not needed)");
 		writeWasmJson(ws, ldc, config, true, true, 0, "skip", 0, 0, 0);
 		return 0;
 	}
+	rememberWasmBuildType(ws, buildType);
 	auto env = environment.toAA();
 	env.remove("DFLAGS");
 	env.remove("DC");
 	env.remove("DMD");
-	if (objectsSupported(config))
+	if (buildType == "release" && objectsSupported(config))
 	{
 		try
 		{
@@ -163,7 +168,7 @@ int buildWasmCell(string ws, string config = "application", bool force = false)
 	}
 	auto r = execute(
 		["dub", "build", "--arch=wasm32-unknown-wasi", "--compiler=" ~ ldc,
-			"--config=" ~ config, "--build=release"],
+			"--config=" ~ config, "--build=" ~ buildType],
 		env, Config.none, ulong.max, ws
 	);
 	writeln(r.output);
@@ -179,6 +184,23 @@ int buildWasmCell(string ws, string config = "application", bool force = false)
 	}
 	writeln("wasm ok  dub  ", exists(ship) ? ship : raw);
 	return 0;
+}
+
+private string lastWasmBuildType(string ws)
+{
+	auto p = buildPath(ws, ".svelte-d", "wasm-build.txt");
+	if (!exists(p))
+		return "";
+	try
+		return readText(p).strip;
+	catch (Exception)
+		return "";
+}
+
+private void rememberWasmBuildType(string ws, string buildType)
+{
+	mkdirRecurse(buildPath(ws, ".svelte-d"));
+	writeText(buildPath(ws, ".svelte-d", "wasm-build.txt"), buildType ~ "\n");
 }
 
 private void shipRawWasm(string publicDir)

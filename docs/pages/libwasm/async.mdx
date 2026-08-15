@@ -1,0 +1,50 @@
+---
+title: JsPromise and Promise
+description: Browser promises are JsPromise.then. D Promise is in-process. .await is the asyncify cell. Do not mix with try/catch on wasm-eh.
+---
+
+# JsPromise and Promise
+
+libwasm has two promise types, and they are not interchangeable. Confusing them is how a `lang=d` script compiles and then either never resumes or aborts on the first throw.
+
+## `JsPromise!T` — a handle to a browser Promise
+
+`struct JsPromise(T = Any)` (`types.d`) is a `JsHandle`. `fetch`, `Response.json`, and anything the bindings return as a JS Promise is this type. The methods are `then` and `error` (not `catch`, which is a D keyword).
+
+```d
+window().fetch(url).then((Response res) {
+  return res.json();
+}).then((JSON body) {
+  this.update.msg = body["ok"].get!string;
+}).error((Any reason) {
+  this.update.msg = "failed";
+});
+```
+
+`then` takes a `nothrow` delegate. On `JsPromise!void` the delegate has no argument; otherwise it takes `T`. The return type of the delegate becomes the next `JsPromise`’s `T`. `error` always takes `Any` and returns `JsPromise!void`. There is no `finally` yet (the source comments `// todo: .Finally`).
+
+`all`, `allSettled`, and `any` take a `JsHandle[]`, pack the handles, and return `JsPromise!Any`. They are the JS combinators, not D fibers.
+
+`{#await job}` in svelte-d is three `@visible` children plus a `JsPromise.then` / `.error` pair attached in `App.ready`. The promise must already be a `JsPromise`. A D `Promise!T` is the wrong type.
+
+## `Promise!(T, E)` — an in-process D promise
+
+`libwasm.promise` is CyberShadow’s ae implementation, Promises/A+ with D deviations. `T` may be `void`. `catch` is `except`. `finally` is `finish`. Fulfill and reject are ordinary methods, not constructor executors. Attempts to fulfill a non-pending promise assert. In debug builds, a resolved promise that is destroyed without a handler reports a leak to stderr (via the console hooks `_start` installed).
+
+The [router](./router) uses `Optional!(Promise!void)` for `@entering` / `@leaving` callbacks so a route can wait before the next iterate. That is a D promise. It is not a `JsPromise`. You cannot `.then` a browser `fetch` with this type, and you cannot `await` it on the wasm-eh cell.
+
+## `.await` is a different cell
+
+```d
+void await(T)(auto ref T promise) {
+  libwasm_await__void(promise.handle.handle);
+}
+```
+
+`libwasm_await__void` is an import that Binaryen `--asyncify` rewrites so the wasm stack can unwind while JS waits. The default svelte-d module is **not** asyncified. It is a `try_table` module shipped raw, because Binaryen 132’s Flatten pass cannot asyncify `try_table`. Calling `.await` on that module is an unresolved import or a hang.
+
+A function that both `try/catch`es and `.await`s is asking Flatten and `try_table` to share a frame. Do not print that combination. The named `ldc-1.36` / `ldc-1.42` configs exist for asyncify work; they do not do D `catch`. svelte-d’s default is wasm-eh plus `JsPromise.then`.
+
+## Personality and `nothrow`
+
+Printed structs are `nothrow: @safe:`. `then` delegates are `nothrow`. A throw inside a `then` that escapes the delegate is not a `{#await}` catch branch; it is an abort unless you `try/catch` **in that same function**. See [memory, EH, CSS, HMR](./runtime) and [wasm-eh](../advanced/wasm-eh).

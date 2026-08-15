@@ -9,7 +9,8 @@ import { cpSync, existsSync, mkdirSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { Socket } from 'node:net'
-import { buildHost, compileWorkspace, findRiscvDev, workspaceDir } from 'svelte-d'
+import { buildHost, compileWorkspace, findRiscvDev } from 'svelte-d'
+import { adminWorkspace, hostExePath } from '../src/ws.ts'
 import { killPort, killProcessTree } from '../src/proc.ts'
 
 const project = dirname(dirname(fileURLToPath(import.meta.url)))
@@ -105,7 +106,7 @@ async function waitHttps(url: string, ms = 20_000): Promise<boolean> {
 
 describe('host PG/Redis soak via vibe.0 helpers', () => {
   test('printed getSoak; live SETEX/GET + SELECT 1 when daemons answer', async () => {
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     expect(compileWorkspace({ ws, project }).status).toBe(0)
     const hostSrc = readFileSync(
       join(ws, 'webserver', 'source', 'generated', 'routes', 'admin', 'page_server.d'),
@@ -123,9 +124,7 @@ describe('host PG/Redis soak via vibe.0 helpers', () => {
     expect([0, 3]).toContain(built.status)
     if (built.status !== 0) return
 
-    const exeWin = join(ws, 'webserver', 'svelte-engine-server.exe')
-    const exePosix = join(ws, 'webserver', 'svelte-engine-server')
-    const exe = existsSync(exeWin) ? exeWin : existsSync(exePosix) ? exePosix : ''
+    const exe = hostExePath(ws)
     if (!exe) return
 
     const redisUp = await portOpen(6379)

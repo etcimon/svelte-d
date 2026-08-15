@@ -13,7 +13,7 @@ This is the component. The body is libdparse-checked and printed onto the struct
 
 `--foptimize-nothrow` is the LDC 1.43 default on wasm, and it deletes landing pads inside `nothrow` functions. The engine therefore passes `--foptimize-nothrow=false`. Even then, keep throwing APIs such as `std.conv.to` inside `try/catch`. The struct remains `nothrow`; an uncaught throw is an abort, not a boundary.
 
-See [script lang="d"](../guide/script-lang-d) for the author-facing contract and [lifetime](./lifetime) for `construct` / `onMount` / `ready`.
+See [script lang="d"](../guide/script-lang-d) for the author-facing contract, [libwasm](../libwasm) for the runtime that contract names, and [lifetime](./lifetime) for `construct` / `onMount` / `ready`.
 
 ## `<script lang="ts">` and `context="module"`
 

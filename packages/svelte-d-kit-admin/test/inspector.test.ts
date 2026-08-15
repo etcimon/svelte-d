@@ -4,7 +4,8 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { compileWorkspace, loadDebugMap, loadInspector, workspaceDir } from 'svelte-d'
+import { compileWorkspace, loadDebugMap, loadInspector } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 import { tryLoadPuppeteer } from '../src/puppeteer.ts'
 import { assertNoDevtoolsFaults, attachPageDevtools, servePublic } from '../src/devtools-sink.ts'
 
@@ -12,7 +13,7 @@ const project = dirname(dirname(fileURLToPath(import.meta.url)))
 
 describe('I3 IR inspector: read-only debug-map listing', () => {
   test('compile wrote ir.json + inspector page; dests include admin IR', () => {
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     if (
       !existsSync(join(ws, 'public', '__svelte-d', 'ir.html')) ||
       !loadInspector(ws).dests.some((d) => d.includes('AdminDash.d'))
@@ -39,7 +40,7 @@ describe('I3 IR inspector: read-only debug-map listing', () => {
   test('Chrome DevTools: IR inspector filter has no ABORT/pageerror', async () => {
     const puppeteer = await tryLoadPuppeteer()
     if (!puppeteer) return
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     const srv = servePublic(ws, 5192)
     const browser = await puppeteer.launch({
       headless: true,

@@ -5,7 +5,7 @@ id: svelte-engine
 kind: bootstrap copy of slideshow3dai (pin 0b130ee files; not a nested clone)
 purpose: target D IR + wasm-eh SPA + vibe.0 host for svelte-D
 default_wasm_cell: LDC 1.43 / master + runtime-v1.43.0 (wasm-eh, no asyncify)
-host_cell: LDC 1.42 + riscv-dev vibe.0 stack
+host_cell: LDC 1.43 + vibe-0 (DUB; add-local only if checkouts exist)
 ```
 
 **Is:** a runnable libwasm app whose `src-d/` *is* the D the svelte-D printer must emit, plus a vibe.0 `webserver/`.  

@@ -9,8 +9,8 @@ import {
   loadDebugMap,
   loadOverlay,
   rewriteStack,
-  workspaceDir,
 } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 import { tryLoadPuppeteer } from '../src/puppeteer.ts'
 import { assertNoDevtoolsFaults, attachPageDevtools, servePublic } from '../src/devtools-sink.ts'
 
@@ -18,7 +18,7 @@ const project = dirname(dirname(fileURLToPath(import.meta.url)))
 
 describe('I2 overlay: compile diagnostics named by orig .svelte', () => {
   test('compile wrote overlay.json + overlay page; LDC dests rewrite', () => {
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     const map0 = loadDebugMap(ws)
     const ov0 = existsSync(join(ws, 'public', '__svelte-d', 'overlay.json'))
       ? loadOverlay(ws)
@@ -55,7 +55,7 @@ describe('I2 overlay: compile diagnostics named by orig .svelte', () => {
   test('Chrome DevTools: overlay page has no ABORT/pageerror', async () => {
     const puppeteer = await tryLoadPuppeteer()
     if (!puppeteer) return
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     const srv = servePublic(ws, 5191)
     const browser = await puppeteer.launch({
       headless: true,

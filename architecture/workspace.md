@@ -33,7 +33,7 @@ or `<project>/svelte-engine-ws` when cwd is a SvelteKit tree (**not** inside
 from the packaged `svelte-engine/`, excluding `.dub`, `node_modules`, `*.exe`,
 `*.pdb`, `*.wasm`, `generateSourceMap.py`, `capacitor.config.json`.
 
-If dest exists and looks like an engine root: require `--force`. `--force` **clears sources** but **keeps** `node_modules`, `.dub`, and `.git` so a leftover Vite cannot fail `rmdirRecurse` with “file in use”. An empty leftover dest (failed prior drop) is reused without `--force`. Locked individual files are skipped and logged.
+Dest is never `rmdirRecurse`’d. `drop-ws` **overlays** the template: missing files are filled; `--force` overwrites template-owned files so a new engine revision can land; files the user added stay. `node_modules`, `.dub`, `.git`, and `.svelte-d` are never deleted. Locked individual files are skip-logged. An empty leftover dest is filled without `--force`.
 
 Engine `src-d/app.d` ships assemble markers (`begin-imports` / `begin-children` / `begin-kit-*`). Vite watches `public/__svelte-d/hmr-tick` so svelte-d incremental compile can `reload` / `full-reload` without a second websocket. Pack with `bun packages/svelte-d/scripts/pack-engine.ts` after engine edits.
 

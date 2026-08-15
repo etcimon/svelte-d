@@ -13,10 +13,10 @@ import {
   parseWasmNames,
   rewriteCdpStack,
   rewriteStack,
-  workspaceDir,
   writeWasmNameMap,
 } from 'svelte-d'
 import { ensureWasm } from '../src/wasm.ts'
+import { adminWorkspace } from '../src/ws.ts'
 
 const project = dirname(dirname(fileURLToPath(import.meta.url)))
 void project
@@ -53,7 +53,7 @@ describe('I4 wasm name section → orig .svelte', () => {
   })
 
   test('rewriteStack / rewriteCdpStack join wasm frames only when dest is known', () => {
-    const map = loadDebugMap(workspaceDir())
+    const map = loadDebugMap(adminWorkspace())
     const at = 'at lib.AdminDash.construct (wasm://wasm/svelte-engine.wasm:0:0)'
     const out = rewriteStack(map, at)
     if (map.entries.some((e) => e.dest.includes('AdminDash.d'))) {
@@ -77,7 +77,7 @@ describe('I4 wasm name section → orig .svelte', () => {
   })
 
   test('writeWasmNameMap parses shipped wasm and writes schema', () => {
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     const wasm = ensureWasm(ws)
     const report = writeWasmNameMap({ ws, wasm: wasm ?? undefined })
     expect(report.schema).toBe('svelte-d-wasm-names/v1')

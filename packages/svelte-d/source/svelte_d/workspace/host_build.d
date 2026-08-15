@@ -20,7 +20,8 @@ string findHostLdc(string riscvDev = null)
 }
 
 /// 0 = built, 2 = dub failed, 3 = host LDC missing.
-int buildHostCell(string ws)
+/// `buildType` is debug (default, symbols) or release (optimize + strip).
+int buildHostCell(string ws, string buildType = "debug")
 {
 	auto dir = buildPath(ws, "webserver");
 	if (!exists(buildPath(dir, "dub.sdl")))
@@ -40,8 +41,10 @@ int buildHostCell(string ws)
 	env.remove("DFLAGS");
 	env.remove("DC");
 	env.remove("DMD");
+	if (buildType != "debug" && buildType != "release")
+		buildType = "debug";
 	auto r = execute(
-		["dub", "build", "--compiler=" ~ ldc],
+		["dub", "build", "--compiler=" ~ ldc, "--build=" ~ buildType],
 		env, Config.none, ulong.max, dir
 	);
 	writeln(r.output);

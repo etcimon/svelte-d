@@ -8,7 +8,8 @@ import { spawn } from 'node:child_process'
 import { existsSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { compileWorkspace, loadDebugMap, rewriteStack, workspaceDir } from 'svelte-d'
+import { compileWorkspace, loadDebugMap, rewriteStack } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 import { tryLoadPuppeteer } from '../src/puppeteer.ts'
 import { killPort, killProcessTree } from '../src/proc.ts'
 import { ensureWasm } from '../src/wasm.ts'
@@ -67,7 +68,7 @@ async function waitHttp(url: string, ms = 20_000): Promise<boolean> {
 
 describe('Svelte language features: DevTools diagnosis', () => {
   test('if/each/await/click rewrite to orig .svelte; no ABORT after interactions', async () => {
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     expect(compileWorkspace({ ws, project }).status).toBe(0)
     const map = loadDebugMap(ws)
     expect(rewriteStack(map, 'src-d/lib/IfToggle.d:32')).toMatch(/IfToggle\.svelte/)

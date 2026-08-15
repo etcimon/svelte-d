@@ -1,11 +1,13 @@
 // Copyright (c) 2026 Etienne Cimon
 // SPDX-License-Identifier: MIT
 import { describe, expect, test } from 'bun:test'
-import { mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
+import { existsSync, mkdirSync, mkdtempSync, writeFileSync } from 'node:fs'
 import { tmpdir } from 'node:os'
 import { join, resolve } from 'node:path'
 import {
   findKitProjectRoot,
+  bundledTemplateDir,
+  dropWorkspace,
   findSvelteDConfigPath,
   loadSvelteDConfig,
   parseWorkspaceField,
@@ -45,6 +47,20 @@ describe('svelte-d.config.ts/js', () => {
     expect(findSvelteDConfigPath(dir).replace(/\\/g, '/')).toMatch(/svelte-d\.config\.ts$/)
     expect(resolveConfigWorkspace(dir)).toBe(resolve(dir, 'svelte-engine-ws'))
     expect(findKitProjectRoot(dir)).toBe(resolve(dir))
+  })
+
+  test('drop-ws overlays and never removes dest extras', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'svelte-d-overlay-'))
+    const dest = join(dir, 'svelte-engine-ws')
+    expect(bundledTemplateDir().length).toBeGreaterThan(0)
+    expect(dropWorkspace({ dest }).status).toBe(0)
+    expect(existsSync(join(dest, 'src-d', 'app.d'))).toBe(true)
+    const extra = join(dest, 'src-d', 'user-keep.d')
+    writeFileSync(extra, '// user customisation\n')
+    expect(dropWorkspace({ dest, force: true }).status).toBe(0)
+    expect(existsSync(extra)).toBe(true)
+    expect(existsSync(dest)).toBe(true)
+    expect(existsSync(join(dest, 'src-d', 'app.d'))).toBe(true)
   })
 
   test('kit project without config still defaults to <project>/svelte-engine-ws', () => {

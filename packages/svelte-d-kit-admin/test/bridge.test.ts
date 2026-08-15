@@ -7,8 +7,8 @@ import {
   kitLogLevel,
   rewriteStack,
   loadDebugMap,
-  workspaceDir,
 } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 import { printKitLine } from '../src/bridge.ts'
 import { runBlankFirefox } from '../src/browsers.ts'
 import { runBlankCdp } from '../src/puppeteer.ts'
@@ -60,7 +60,7 @@ describe('kit-admin dual-browser + vibe.0 colored logs', () => {
     process.env.NO_COLOR = '1'
     const chunks: string[] = []
     const out = { write(s: string) { chunks.push(s); return true } } as unknown as NodeJS.WriteStream
-    printKitLine('chrome', 'info', 'ready', loadDebugMap(workspaceDir()), out)
+    printKitLine('chrome', 'info', 'ready', loadDebugMap(adminWorkspace()), out)
     expect(chunks.join('')).toContain('[chrome info]')
     expect(chunks.join('')).toContain('ready')
     if (prev === undefined) delete process.env.NO_COLOR
@@ -68,7 +68,7 @@ describe('kit-admin dual-browser + vibe.0 colored logs', () => {
   })
 
   test('chrome and firefox about:blank consoles rewrite when browsers exist', async () => {
-    const map = loadDebugMap(workspaceDir())
+    const map = loadDebugMap(adminWorkspace())
     const chrome = await runBlankCdp(map)
     if (chrome) {
       expect(chrome.console.some((c) => c.text.includes('admin/page.d'))).toBe(true)

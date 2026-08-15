@@ -1,10 +1,12 @@
 name "svelte-engine-server"
-description "svelte-engine host (vibe.0). Uses riscv-dev add-local packages."
+description "svelte-engine host (vibe.0). DUB vibe-0; add-local only when checkouts exist."
 copyright "Copyright © 2023-2026, GlobecSys Inc"
 authors "Etienne"
 dependency "vibe-0" version="~>1.2.0"
 dependency "memutils" version="~>1.0.0"
 dependency "botan" version="~>1.13.0"
+subConfiguration "botan" "full"
+# botan/full_openssl optional openssl ~>1.1.7 conflicts with vibe-0's openssl 3.3.4.
 # dmaxminddb 0.1.2 does not compile on LDC 1.42 (missing bigEndianToNative).
 # geoip.d is a stub until that package is updated.
 targetType "executable"
@@ -12,3 +14,14 @@ targetName "svelte-engine-server"
 targetPath "."
 sourcePaths "source"
 versions "VibeCustomMain" "DisableDebugger" "VibeNoDebug" "SQLite" "TLSGC" "VibeRequestDebugger" "VibeDebugCatchAll" "DeimosOpenSSL_3_0"
+
+# `svelte-d host` / `bun run dev` keep debug. `svelte-d host --release` / `bun run build` strip.
+buildType "debug" {
+    buildOptions "debugMode" "debugInfo"
+}
+
+buildType "release" {
+    buildOptions "releaseMode" "optimize" "inline"
+    lflags "-strip-all"
+    lflags "/OPT:REF" "/OPT:ICF" "/DEBUG:NONE" platform="windows"
+}

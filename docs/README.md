@@ -13,3 +13,5 @@ bun run start    # preview the export
 From the repo root: `bun run docs` / `bun run docs:build`.
 
 The copyable [admin example](examples/admin) is a simplified `svelte-d-kit-admin` (layout, dashboard, users, `:id`) without Postgres, Redis, or CDP.
+
+[libwasm](pages/libwasm) and [vibe.0](pages/vibe.0) document the two D cells. [Wasm and host sizes](pages/advanced/sizes.mdx) records debug vs release+strip on the admin tree (12.64 MiB → 1.59 MiB wasm). Getting Started recommends VS Code plus code-d pointed at `svelte-engine-ws`. A consumer machine does not include a `riscv-dev` tree.

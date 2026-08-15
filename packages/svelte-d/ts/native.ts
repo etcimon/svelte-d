@@ -113,18 +113,26 @@ export function compileWorkspace(
 
 export function buildWasm(
   ws?: string,
-  opts: { probes?: boolean; force?: boolean } = {}
+  opts: { probes?: boolean; force?: boolean; mode?: 'debug' | 'release' } = {}
 ): RunResult {
   const dest = ws ?? workspaceDir()
   const args = ['wasm', '--ws', dest]
   if (opts.probes) args.push('--probes')
   if (opts.force) args.push('--force')
+  if (opts.mode === 'debug') args.push('--debug')
+  else if (opts.mode === 'release') args.push('--release')
   return runExe(args)
 }
 
-export function buildHost(ws?: string): RunResult {
-  const dest = ws ?? workspaceDir()
-  return runExe(['host', '--ws', dest])
+export function buildHost(
+  ws?: string,
+  opts: { mode?: 'debug' | 'release' } = {}
+): RunResult {
+  const dest = typeof ws === 'string' ? ws : workspaceDir()
+  const args = ['host', '--ws', dest]
+  if (opts.mode === 'release') args.push('--release')
+  else if (opts.mode === 'debug') args.push('--debug')
+  return runExe(args)
 }
 
 export function parseSvelte(path: string, via: Via = 'auto'): RunResult {

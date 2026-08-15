@@ -7,6 +7,8 @@ export default {
   concepts: 'Concepts',
   guide: 'Development Guide',
   language: 'Svelte → D IR',
+  libwasm: 'libwasm',
+  'vibe.0': 'vibe.0',
   reference: 'Reference',
   advanced: 'Advanced',
 }

@@ -7,9 +7,9 @@ description: svelte-d command surface. Dest defaults to svelte-d.config.ts works
 
 `bunx svelte-d <cmd>` forwards to the native executable, except for `setup`, which the bun bin runs in TypeScript so it works before that executable exists. Dest flags (`--dest`, `--ws`) override `svelte-d.config.ts`. Without them, dest is the configured `workspace` or `<project>/svelte-engine-ws`.
 
-`setup` finds or downloads LDC 1.43 and `dub add-local`s libwasm / vibe.0 when checkouts exist. `drop-ws` copies the packaged engine; `--force` refreshes sources and keeps `node_modules` / `.dub`. `parse` is one file, Pegged plus libdparse. `scan` lists kit files in a workspace. `compile` drops if needed, ingests `--project` (or cwd if it has `src/routes`), prints IR, and writes `fallthrough.json` / the debug map. `--only FILE` reprints one kit source for watch / HMR.
+`setup` finds or downloads LDC 1.43 and `dub add-local`s libwasm / vibe.0 when checkouts exist. `drop-ws` overlays the packaged engine onto dest and **never deletes the workspace folder** or files you added. `--force` overwrites template-owned files so a new engine revision can land. `parse` is one file, Pegged plus libdparse. `scan` lists kit files in a workspace. `compile` drops if dest is missing, ingests `--project` (or cwd if it has `src/routes`), prints IR, and writes `fallthrough.json` / the debug map. `--only FILE` reprints one kit source for watch / HMR.
 
-`map` with a kit path prints one JSON object; `map --ws DIR` writes `fallthrough.json` for the whole tree. `bootstrap` writes and checks the engine-integration contract. `kit-routes` lists pattern, kit rel, and `src-d`. `lodash` lists `libwasm.lodash` methods. `wasm` is the wasm-eh cell (`--probes` runs `run-probes.mjs`; `--force` rebuilds). `host` is `dub build` in `ws/webserver`. `version` prints `1`.
+`map` with a kit path prints one JSON object; `map --ws DIR` writes `fallthrough.json` for the whole tree. `bootstrap` writes and checks the engine-integration contract. `kit-routes` lists pattern, kit rel, and `src-d`. `lodash` lists `libwasm.lodash` methods. `wasm` is the wasm-eh cell: default `--release` (optimize + `lflags -strip-all`); `--debug` keeps symbols. `--probes` runs `run-probes.mjs`; `--force` rebuilds. `host` is `dub build` in `ws/webserver`: default `--debug`; `--release` strips. `build` compiles IR then both cells in release. `version` prints `1`.
 
 ```
 svelte-d setup
@@ -22,7 +22,8 @@ svelte-d map --ws DIR
 svelte-d bootstrap [--ws DIR]
 svelte-d kit-routes [--ws DIR]
 svelte-d lodash
-svelte-d wasm [--ws DIR] [--probes] [--force]
-svelte-d host [--ws DIR]
+svelte-d wasm [--ws DIR] [--debug|--release] [--probes] [--force]
+svelte-d host [--ws DIR] [--debug|--release]
+svelte-d build [--ws DIR] [--project DIR]
 svelte-d version
 ```

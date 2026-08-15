@@ -15,4 +15,6 @@ bunx svelte-kit-d dev
 
 HMR does not invent a second websocket. Vite already has one. svelte-d writes `public/__svelte-d/hmr-tick` when a reprint should reload, and the workspace Vite config watches that file. Incremental compile of an unchanged dest **does not write the file**. That is reprint-skip: the dest bytes are compared, and a match leaves the mtime alone so the opposite cell does not rebuild. A host-only edit does not relink wasm (opposite-cell-skip). The default no-LTO wasm cell can go further and `ldc2 -c` only dirty `src-d` into `.svelte-d/o/` ([incremental compile](../advanced/incremental)).
 
-If Vite is “file in use” on Windows after a crash, drop with `--force` rather than deleting the workspace by hand. `--force` keeps `node_modules`. Deleting the workspace by hand does not, and the next drop will reinstall it.
+If Vite is “file in use” on Windows after a crash, drop with `--force` rather than deleting the workspace by hand. `--force` overlays template files and never removes `svelte-engine-ws`. Deleting the workspace by hand throws away customisations and `node_modules`; the next drop will recreate the folder, not your edits.
+
+`svelte-kit-d dev` and `bun run dev` stay on debug wasm/host. `bun run build` / `svelte-d build` is release + strip. Do not ship the debug module: it is ~8× larger on the admin tree ([sizes](../advanced/sizes)).

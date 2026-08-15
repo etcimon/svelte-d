@@ -143,7 +143,7 @@ bool isLibwasmDubCache(string p)
 	return n.canFind("/.dub/packages/") || n.canFind("/dub/packages/");
 }
 
-/// Walk for a source checkout (riscv-compilers/libwasm or libwasm/).
+/// Walk for a source checkout if one happens to exist. Consumers use DUB fetch.
 string findLibwasmCheckout(string riscvDev = null)
 {
 	import std.process : environment;
@@ -266,69 +266,14 @@ private bool endsWith(string s, string tail)
 	return s.length >= tail.length && s[$ - tail.length .. $] == tail;
 }
 
-/// Dirs a live Vite / dub process holds open. Never rmdirRecurse these.
-private bool keepOnForce(string name)
-{
-	auto b = baseName(name).toLower;
-	return b == "node_modules" || b == ".dub" || b == ".git";
-}
-
-/// Replace dest contents without deleting locked install/build dirs.
-private void clearDest(string dest)
-{
-	if (!exists(dest) || !isDir(dest))
-		return;
-	foreach (e; dirEntries(dest, SpanMode.shallow))
-	{
-		if (keepOnForce(e.name))
-			continue;
-		try
-		{
-			if (e.isDir && baseName(e.name).toLower == "public")
-			{
-				foreach (f; dirEntries(e.name, SpanMode.shallow))
-				{
-					if (skipName(f.name))
-						continue;
-					try
-					{
-						if (f.isDir)
-							rmdirRecurse(f.name);
-						else
-							remove(f.name);
-					}
-					catch (Exception ex)
-					{
-						stderr.writeln("drop: skip locked ", f.name, " (", ex.msg, ")");
-					}
-				}
-				continue;
-			}
-			if (e.isDir)
-				rmdirRecurse(e.name);
-			else
-				remove(e.name);
-		}
-		catch (Exception ex)
-		{
-			stderr.writeln("drop: skip locked ", e.name, " (", ex.msg, ")");
-		}
-	}
-}
-
-/// Copy the bootstrap template to dest (svelte-engine-ws). Does not mutate the template.
-/// `--force` refreshes sources but keeps `node_modules` / `.dub` so a leftover Vite
-/// cannot make `rmdirRecurse` fail the whole drop.
+/// Overlay the bootstrap template onto dest. Never deletes dest, never
+/// rmdirRecurse's the workspace, and never removes files the user added.
+/// `--force` overwrites template-owned files; without it, existing dest
+/// files are kept (first drop still fills missing ones).
 void dropWorkspace(string dest, string srcTemplate, bool force)
 {
 	if (!exists(srcTemplate) || !isDir(srcTemplate))
 		throw new Exception("template missing: " ~ srcTemplate);
-	if (exists(dest))
-	{
-		if (isEngineRoot(dest) && !force)
-			throw new Exception(dest ~ " exists (pass --force to replace)");
-		clearDest(dest);
-	}
 	mkdirRecurse(dest);
 	size_t n;
 	foreach (e; dirEntries(srcTemplate, SpanMode.breadth))
@@ -351,6 +296,8 @@ void dropWorkspace(string dest, string srcTemplate, bool force)
 			mkdirRecurse(outp);
 		else
 		{
+			if (exists(outp) && !force)
+				continue;
 			mkdirRecurse(dirName(outp));
 			try
 			{
@@ -363,5 +310,5 @@ void dropWorkspace(string dest, string srcTemplate, bool force)
 			}
 		}
 	}
-	writeln("dropped ", srcTemplate, " -> ", dest, " (", n, " files)");
+	writeln("dropped ", srcTemplate, " -> ", dest, " (overlay ", n, " files)");
 }

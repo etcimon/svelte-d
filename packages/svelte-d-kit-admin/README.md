@@ -3,10 +3,16 @@
 bun + TypeScript consumer of `svelte-d`. Incremental **admin panel** from
 [architecture/admin-debug.md](../../architecture/admin-debug.md).
 
-`drop-ws` copies the **packaged** engine (`svelte-d/templates/engine`).
-`--force` refreshes sources but keeps `node_modules` so a leftover Vite
-cannot lock the drop. `compile --project` overlays this package's
-`src/routes/admin` onto the workspace. The engine is not the app.
+`svelte-d.config.ts` sets `workspace: './svelte-engine-ws'` so drop and
+compile land in **this package’s top-level** dest, not the repo-root
+workspace. `drop-ws` copies the **packaged** engine
+(`svelte-d/templates/engine`). `--force` refreshes sources but keeps
+`node_modules` so a leftover Vite cannot lock the drop. `compile --project`
+overlays this package's `src/routes/admin` onto that dest. After print,
+`bun run dev` keeps **debug** wasm/host (symbols, no strip). `bun run build`
+is **release + `lflags -strip-all`** for both cells and writes debug vs
+release sizes to `svelte-engine-ws/.svelte-d/artifact-sizes.json`. The
+engine is not the app.
 
 - kit tree `src/routes/admin` printed to libwasm D IR
 - derived `debug-map.json` + `rewriteStack` (D IR → `.svelte`)
@@ -23,7 +29,8 @@ missing Chromium/Firefox skips those smokes.
 
 ```
 bun test
-bun run dev          # drop packaged engine, ingest src/, vite, vibe.0 logs
+bun run dev          # debug wasm/host, vite, vibe.0 logs
+bun run build        # release + strip-all; print debug vs release sizes
 bun run dev --chrome
 bun run dev --firefox
 ```

@@ -19,3 +19,5 @@ void getUsers(HTTPServerRequest req, HTTPServerResponse res)
 ```
 
 Do not `import libwasm` here. Do not `mixin Spa`. The simplified admin example’s host files return JSON and nothing else; kit-admin’s host files additionally talk to Postgres and Redis and write `"skip"` when those daemons are absent. Both are vibe.0. Neither is a Node route module.
+
+The runtime those identifiers belong to — `listenHTTP`, `URLRouter`, `registerWebInterface`, `Json`, `connectDB` — is [vibe.0](../vibe.0). [lang="d" on the host cell](../vibe.0/lang-d) walks a full `+page.server.d` against that API. Open `svelte-engine-ws/webserver` in VS Code with code-d to complete the same names; see [Getting Started](../getting-started).

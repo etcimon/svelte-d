@@ -11,8 +11,8 @@ import {
   dropWorkspace,
   loadDebugMap,
   rewriteStack,
-  workspaceDir,
 } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 import { tryLoadPuppeteer } from '../src/puppeteer.ts'
 import { tryLoadPlaywright } from '../src/browsers.ts'
 import { killPort, killProcessTree } from '../src/proc.ts'
@@ -90,7 +90,7 @@ function assertRewrite(impl: ImplProbe) {
 describe('live admin DevTools: vite + chrome/firefox console', () => {
   test('SPA boots, debug-map rewrite, IR implementations, no wasm abort', async () => {
     killPort(PORT)
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     if (!existsSync(join(ws, 'src-d', 'app.d'))) {
       const dropped = dropWorkspace({ dest: ws, force: existsSync(ws) })
       expect(dropped.status).toBe(0)

@@ -6,6 +6,8 @@ Follow libwasm `BUILDING.md`, then this package’s `dub.sdl`.
 
 **Default cell is wasm-eh** (`configuration "application"` = LDC master / 1.43, `subConfiguration "libwasm" "ldc-master"`, copy-raw, no asyncify). Named alternates: `ldc-1.42`, `ldc-1.36`.
 
+**Debug vs release.** `buildType "debug"` keeps symbols (name section + DWARF). `buildType "release"` is optimize + `lflags -strip-all`. `svelte-d wasm` / `svelte-d build` use release; `svelte-d wasm --debug` and `bun run dev` use debug. On the kit-admin tree that is 12.64 MiB debug wasm versus 1.59 MiB stripped. The host `webserver/dub.sdl` has the same pair (`--debug` default, `--release` + `/OPT:REF` on Windows).
+
 **1. Compiler and conf.** Use LDC 1.36.0. BUILDING.md’s empty `post-switches` alone fails the dub platform probe (`cannot find object.d`). This workspace sets `post-switches = -I%%ldcbinarypath%%/../import-libwasm` and `-d-version=CRuntime_LIBWASM`. The junction `import-libwasm` → `libwasm/druntime-wasm`, so **`object.d` is libwasm’s**, not LDC `import/object.d`. `-defaultlib=` is already empty in the 1.36 Windows package.
 
 **2. Resolve libwasm without `path:`.** Upstream assumed a sibling `../libwasm`. This checkout uses `version="~>0.9.0"` for `libwasm`, `memutils-wasm`, `fast-wasm`, `diet-wasm`. `setenv-wasm.ps1` does `dub add-local` on `riscv-compilers/libwasm` (and its inner packages). libwasm’s *own* `path=./memutils-wasm` deps stay path-local inside that clone.

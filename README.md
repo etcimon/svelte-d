@@ -42,16 +42,20 @@ export default { workspace: './svelte-engine-ws' }
 import { dropWorkspace, compileWorkspace, workspaceDir } from 'svelte-d'
 
 const ws = workspaceDir() // ./svelte-engine-ws next to svelte-d.config.ts
-dropWorkspace({ dest: ws, force: true })
+dropWorkspace({ dest: ws, force: true }) // overlay; never deletes dest
 compileWorkspace({ ws, project: process.cwd() }) // ingest src/routes + src/lib
 ```
 
 Or the CLI:
 
 ```powershell
-bunx svelte-d drop-ws --force
+bunx svelte-d drop-ws --force   # overlay template; dest folder is kept
 bunx svelte-d compile --project .
+bunx svelte-d wasm --debug      # symbols for IR work in svelte-engine-ws
+bunx svelte-d build             # IR + wasm/host release + lflags -strip-all
 ```
+
+Release wasm on the kit-admin tree is **1.59 MiB** (debug 12.64 MiB). Release host is **10.85 MiB** (debug 14.08 MiB). See [`docs/pages/advanced/sizes.mdx`](docs/pages/advanced/sizes.mdx).
 
 `compile` infers `--project` when cwd has `src/routes`. Output is **`svelte-engine-ws` at the project root** (or `svelte-d.config.ts` `workspace`), never the packaged `svelte-engine/`. See [`architecture/package.md`](architecture/package.md) and [`architecture/workspace.md`](architecture/workspace.md).
 
@@ -61,7 +65,7 @@ Clone with the engine:
 git clone --recurse-submodules https://github.com/etcimon/svelte-d.git
 ```
 
-`svelte-engine/` is the drop source. `libwasm` is located by walking for `source/libwasm/dom.d` (or `riscv-compilers/libwasm` next to a riscv-dev host).
+`svelte-engine/` is the drop source. A consumer does not have a `riscv-dev` platform tree: `bunx svelte-d setup` installs LDC 1.43 under `~/.svelte-d/toolchains`, and DUB fetches libwasm / vibe-0. A live libwasm checkout is used only when `source/libwasm/dom.d` happens to sit next to the compiler.
 
 Docs (this site, Next.js + Nextra): [`docs/`](docs/). `bun run docs` serves them locally. The language section teaches every interactive `.svelte` construct and the libwasm D IR it prints.
 

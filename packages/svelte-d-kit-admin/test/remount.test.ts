@@ -4,13 +4,14 @@ import { describe, expect, test } from 'bun:test'
 import { existsSync, readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { compileWorkspace, workspaceDir } from 'svelte-d'
+import { compileWorkspace } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 
 const project = dirname(dirname(fileURLToPath(import.meta.url)))
 
 describe('T5 kit remount + slot projection', () => {
   test('admin pages remount on the layout; layouts stay; one Spa!App', () => {
-    const ws = workspaceDir()
+    const ws = adminWorkspace()
     const appPath = join(ws, 'src-d', 'app.d')
     if (
       !existsSync(join(ws, 'src-d', 'kit_router.d')) ||

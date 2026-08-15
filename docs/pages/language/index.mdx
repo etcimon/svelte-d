@@ -36,3 +36,5 @@ Lodash, moment, and `document()` / `window()` appear only in **procedural** arms
 A construct that cannot be `compile!()`’d is a diagnostic, not a JavaScript fallback. If libwasm has no idiom yet, that is a titled seam in libwasm, then the engine, then the printer. svelte-d does not grow a third runtime to paper over the seam.
 
 The rest of this section is the interactive language, construct by construct. Read them in order if you are learning; skip to the construct you are about to write if you already know `ClickField`. Engine goldens live in `svelte-engine/src-svelte/lib/Combo*.svelte`, `ClickField.svelte`, and `IfToggle.svelte`. They are the idiom library, not your application.
+
+When you need the library those idioms call — `compile!`, `this.update`, `UnorderedList`, `JsPromise`, the handle table — open [libwasm](../libwasm). Host files are the other cell: [vibe.0](../vibe.0).

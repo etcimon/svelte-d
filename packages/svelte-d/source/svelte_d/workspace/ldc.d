@@ -152,6 +152,7 @@ string findLdc(string start = null)
 		auto p = seed;
 		foreach (_; 0 .. 10)
 		{
+			// Author-machine shortcuts. Consumers use ~/.svelte-d/toolchains or PATH.
 			foreach (rel; [
 				buildPath("riscv-compilers", "ldc2-build", "bin"),
 				buildPath("ldc2-build", "bin")
@@ -207,6 +208,7 @@ string findVibe0Checkout(string start = null)
 		auto p = seed;
 		foreach (_; 0 .. 10)
 		{
+			// Optional author checkouts. Consumers use the DUB vibe-0 registry.
 			foreach (cand; [buildPath(p, "vibe.0"), buildPath(p, "riscv-dev", "vibe.0")])
 			{
 				if (isVibe0Root(cand))
@@ -221,7 +223,7 @@ string findVibe0Checkout(string start = null)
 	return "";
 }
 
-private string findPkgDir(string dirName, string start = null)
+private string findPkgDir(string pkgName, string start = null)
 {
 	foreach (seed; pathSeeds(start))
 	{
@@ -230,7 +232,7 @@ private string findPkgDir(string dirName, string start = null)
 		auto p = seed;
 		foreach (_; 0 .. 10)
 		{
-			foreach (cand; [buildPath(p, dirName), buildPath(p, "riscv-dev", dirName)])
+			foreach (cand; [buildPath(p, pkgName), buildPath(p, "riscv-dev", pkgName)])
 			{
 				if (exists(buildPath(cand, "dub.json")) || exists(buildPath(cand, "dub.sdl")))
 					return cand;

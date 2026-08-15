@@ -12,8 +12,16 @@ import {
   compileWorkspace,
   dropWorkspace,
   loadDebugMap,
-  workspaceDir,
 } from 'svelte-d'
+import {
+  adminWorkspace,
+  fmtBytes,
+  hostExePath,
+  wasmPath,
+  fileBytes,
+  writeWorkspaceEnv,
+} from './ws.ts'
+import { buildHostCell, buildWasmCell, compileCellsCompare, formatDualSizes } from './cells.ts'
 import { printHostChunk, printKitLine } from './bridge.ts'
 import { attachLiveBrowsers } from './browsers.ts'
 import { killPort, killProcessTree } from './proc.ts'
@@ -37,10 +45,11 @@ function pipeChild(name: 'vite' | 'host' | 'compile', child: ChildProcess) {
 }
 
 async function dev() {
-  const ws = workspaceDir()
+  const ws = adminWorkspace()
   printKitLine('compile', 'info', 'drop packaged engine → ' + ws)
   const d = dropWorkspace({ force: flag('--force'), dest: ws })
   if (d.status !== 0) process.exit(d.status)
+  writeWorkspaceEnv(ws)
   printKitLine('compile', 'info', 'compile --project ' + project)
   const c = compileWorkspace({ ws, project })
   if (c.stdout) printKitLine('compile', 'log', c.stdout.trimEnd())
@@ -48,8 +57,20 @@ async function dev() {
     if (c.stderr) printKitLine('compile', 'error', c.stderr.trimEnd())
     process.exit(c.status)
   }
-  const wasm = ensureWasm(ws)
-  printKitLine('compile', wasm ? 'info' : 'warn', wasm ? 'wasm ' + wasm : 'no svelte-engine.wasm to copy')
+  let wasmFile = wasmPath(ws)
+  if (!wasmFile) {
+    const w = buildWasmCell('debug', ws, false)
+    printKitLine('compile', w.status === 0 ? 'info' : 'warn', 'wasm debug ' + w.label)
+    wasmFile = w.path
+  }
+  const wasm = wasmFile ? ensureWasm(ws) : null
+  printKitLine(
+    'compile',
+    wasm ? 'info' : 'warn',
+    wasm
+      ? 'wasm debug ' + wasm + ' ' + fmtBytes(fileBytes(wasmFile))
+      : 'no svelte-engine.wasm'
+  )
 
   const kids: ChildProcess[] = []
   const kill = () => {
@@ -61,11 +82,14 @@ async function dev() {
   })
 
   if (!flag('--no-host')) {
-    const exe = join(ws, 'webserver', 'svelte-engine-server.exe')
-    const posix = join(ws, 'webserver', 'svelte-engine-server')
-    const host = existsSync(exe) ? exe : existsSync(posix) ? posix : ''
+    let host = hostExePath(ws)
+    if (!host) {
+      const h = buildHostCell('debug', ws)
+      printKitLine('host', h.status === 0 ? 'info' : 'warn', 'host debug ' + h.label)
+      host = h.path
+    }
     if (host) {
-      printKitLine('host', 'info', 'vibe.0 ' + host + ' :8180')
+      printKitLine('host', 'info', 'vibe.0 debug ' + host + ' ' + fmtBytes(fileBytes(host)) + ' :8180')
       const h = spawn(host, [], {
         cwd: join(ws, 'webserver'),
         stdio: ['ignore', 'pipe', 'pipe'],
@@ -121,15 +145,44 @@ async function dev() {
   }
 }
 
+function buildRelease() {
+  const ws = adminWorkspace()
+  printKitLine('compile', 'info', 'drop packaged engine → ' + ws)
+  const d = dropWorkspace({ force: flag('--force'), dest: ws })
+  if (d.status !== 0) process.exit(d.status)
+  writeWorkspaceEnv(ws)
+  printKitLine('compile', 'info', 'compile --project ' + project)
+  const c = compileWorkspace({ ws, project })
+  if (c.stdout) printKitLine('compile', 'log', c.stdout.trimEnd())
+  if (c.status !== 0) {
+    if (c.stderr) printKitLine('compile', 'error', c.stderr.trimEnd())
+    process.exit(c.status)
+  }
+  printKitLine('compile', 'info', 'release + lflags -strip-all (debug kept as *.debug)')
+  const sizes = compileCellsCompare(ws)
+  printKitLine('compile', 'info', formatDualSizes(sizes))
+  if (sizes.wasm.release.status !== 0 && !sizes.wasm.release.bytes) process.exit(2)
+  if (sizes.host.release.status !== 0 && !sizes.host.release.bytes) process.exit(2)
+}
+
 if (cmd === 'dev' || cmd === 'start' || cmd === 'run') {
   dev().catch((e) => {
     printKitLine('compile', 'error', String(e))
     process.exit(1)
   })
+} else if (cmd === 'build') {
+  try {
+    buildRelease()
+  } catch (e) {
+    printKitLine('compile', 'error', String(e))
+    process.exit(1)
+  }
 } else {
   console.log(`svelte-d-kit-admin — bun + ts + svelte-d
   bun src/cli.ts dev [--force] [--no-host] [--no-browser] [--chrome] [--firefox]
-      drop packaged engine, ingest this src/, compile, vite, vibe.0 logs,
-      Chrome + Firefox console rewritten through debug-map onto this prompt
+      drop, ingest, compile IR, debug wasm/host, vite, vibe.0 logs
+  bun src/cli.ts build [--force]
+      drop, ingest, compile IR, then release + lflags -strip-all for
+      wasm and the vibe.0 host; print debug vs release sizes
 `)
 }

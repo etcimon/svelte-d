@@ -41,8 +41,11 @@ void usage()
 	writeln("  svelte-d bootstrap [--ws DIR]  # write/print engine-integration contract");
 	writeln("  svelte-d lodash               # list libwasm.lodash methods");
 	writeln("  svelte-d kit-routes [--ws DIR]");
-	writeln("  svelte-d wasm [--ws DIR] [--probes] [--force]  # per-.o src-d + relink; dub fallback");
-	writeln("  svelte-d host [--ws DIR]             # dub build in ws/webserver (vibe.0)");
+	writeln("  svelte-d wasm [--ws DIR] [--debug|--release] [--probes] [--force]");
+	writeln("      wasm cell; default --release (optimize + lflags -strip-all). --debug keeps symbols.");
+	writeln("  svelte-d host [--ws DIR] [--debug|--release]");
+	writeln("      vibe.0 host; default --debug. --release is optimize + strip.");
+	writeln("  svelte-d build [--ws DIR] [--project DIR]  # compile IR + wasm/host --release");
 	writeln("  svelte-d setup                       # find LDC 1.43 + vibe.0 + libwasm");
 	writeln("  svelte-d version");
 }
@@ -194,10 +197,14 @@ int main(string[] args)
 			string ws;
 			bool probes;
 			bool force;
-			getopt(args, "ws", &ws, "probes", &probes, "force", &force);
+			bool dbg;
+			bool rel;
+			getopt(args, "ws", &ws, "probes", &probes, "force", &force,
+				"debug", &dbg, "release", &rel);
 			auto root = findRiscvDev();
 			ws = wsOrDefault(ws, root);
-			auto st = buildWasmCell(ws, "application", force);
+			auto mode = (dbg && !rel) ? "debug" : "release";
+			auto st = buildWasmCell(ws, "application", force, mode);
 			if (st != 0)
 				return st;
 			if (probes)
@@ -207,10 +214,28 @@ int main(string[] args)
 		if (cmd == "host")
 		{
 			string ws;
-			getopt(args, "ws", &ws);
+			bool dbg;
+			bool rel;
+			getopt(args, "ws", &ws, "debug", &dbg, "release", &rel);
 			auto root = findRiscvDev();
 			ws = wsOrDefault(ws, root);
-			return buildHostCell(ws);
+			auto mode = rel ? "release" : "debug";
+			return buildHostCell(ws, mode);
+		}
+		if (cmd == "build")
+		{
+			string ws;
+			string project;
+			getopt(args, "ws", &ws, "project", &project);
+			auto root = findRiscvDev();
+			ws = wsOrDefault(ws, root);
+			auto st = compileWorkspace(ws, project);
+			if (st != 0)
+				return st;
+			st = buildWasmCell(ws, "application", true, "release");
+			if (st != 0)
+				return st;
+			return buildHostCell(ws, "release");
 		}
 		if (cmd == "setup")
 		{

@@ -16,21 +16,22 @@ import {
   lookupOrig,
   rewriteStack,
   runCli,
-  workspaceDir,
 } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 
 const project = dirname(dirname(fileURLToPath(import.meta.url)))
 
 describe('kit-admin compile: IR, debug-map, vibe.0 PG/Redis/JSON', () => {
   test('drop packaged engine + ingest project admin into the workspace', () => {
     expect(bundledTemplateDir().length).toBeGreaterThan(0)
-    const dropped = dropWorkspace({ force: true })
+    const ws = adminWorkspace()
+    expect(ws.replace(/\\/g, '/')).toMatch(/svelte-d-kit-admin\/svelte-engine-ws$/)
+    const dropped = dropWorkspace({ dest: ws, force: true })
     if (dropped.status !== 0) {
       // Leftover Vite may still hold a file; reuse a populated ws.
-      expect(existsSync(join(workspaceDir(), 'src-d', 'app.d'))).toBe(true)
+      expect(existsSync(join(ws, 'src-d', 'app.d'))).toBe(true)
     }
-    expect(compileWorkspace({ ws: workspaceDir(), project }).status).toBe(0)
-    const ws = workspaceDir()
+    expect(compileWorkspace({ ws, project }).status).toBe(0)
 
     const layout = readFileSync(join(ws, 'src-d', 'routes', 'admin', 'layout.d'), 'utf8')
     expect(layout).toMatch(/\/\/# svelte-d-ir orig=.*routes\/admin\/\+layout\.svelte:1 kind=file/)
@@ -261,7 +262,7 @@ describe('kit-admin compile: IR, debug-map, vibe.0 PG/Redis/JSON', () => {
   })
 
   test('kit-routes CLI lists /admin tree including :id and features', () => {
-    const r = runCli(['kit-routes', '--ws', workspaceDir()])
+    const r = runCli(['kit-routes', '--ws', adminWorkspace()])
     expect(r.status).toBe(0)
     expect(r.stdout).toContain('/admin')
     expect(r.stdout).toContain('/admin/users')

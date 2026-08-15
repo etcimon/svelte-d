@@ -9,14 +9,14 @@ import {
   loadDebugMap,
   rewriteDevtoolsFrame,
   rewriteCdpStack,
-  workspaceDir,
 } from 'svelte-d'
+import { adminWorkspace } from '../src/ws.ts'
 import { attachCdpDevtools, runBlankCdp } from '../src/puppeteer.ts'
 import { runBlankFirefox } from '../src/browsers.ts'
 
 describe('DevTools / libwasm stack rewrite (chrome + firefox)', () => {
   test('rewriteDevtoolsFrame maps CDP 0-based lines onto svelte orig', () => {
-    const map = loadDebugMap(workspaceDir())
+    const map = loadDebugMap(adminWorkspace())
     const dest = 'src-d/routes/admin/page.d'
     const fileEnt = map.entries.find((e) => e.dest.replace(/\\/g, '/').includes('admin/page.d'))
     if (!fileEnt) {
@@ -34,7 +34,7 @@ describe('DevTools / libwasm stack rewrite (chrome + firefox)', () => {
   })
 
   test('formatWasmAbort appends svelte orig when dest is known', () => {
-    const map = loadDebugMap(workspaceDir())
+    const map = loadDebugMap(adminWorkspace())
     const e = map.entries.find((x) => x.dest.replace(/\\/g, '/').includes('admin/page.d'))
     const text = formatWasmAbort(
       map,
@@ -49,7 +49,7 @@ describe('DevTools / libwasm stack rewrite (chrome + firefox)', () => {
   })
 
   test('rewriteCdpStack never invents orig for wasm:// frames', () => {
-    const map = loadDebugMap(workspaceDir())
+    const map = loadDebugMap(adminWorkspace())
     const s = rewriteCdpStack(map, [
       { url: 'wasm://wasm/svelte-engine.wasm', functionName: '_start', lineNumber: 0 },
     ])
@@ -58,7 +58,7 @@ describe('DevTools / libwasm stack rewrite (chrome + firefox)', () => {
   })
 
   test('compile published debug-map for the page (DevTools fetch)', () => {
-    const pub = join(workspaceDir(), 'public', '__svelte-d', 'debug-map.json')
+    const pub = join(adminWorkspace(), 'public', '__svelte-d', 'debug-map.json')
     if (!existsSync(pub)) return
     const j = JSON.parse(readFileSync(pub, 'utf8'))
     expect(j.schema).toBe('svelte-d-debug-map/v1')
@@ -66,7 +66,7 @@ describe('DevTools / libwasm stack rewrite (chrome + firefox)', () => {
   })
 
   test('chrome CDP consoleAPICalled + firefox console when browsers exist', async () => {
-    const map = loadDebugMap(workspaceDir())
+    const map = loadDebugMap(adminWorkspace())
     const chrome = await runBlankCdp(map)
     if (chrome) {
       expect(chrome.console.some((c) => c.rewritten.includes('admin') || c.text.includes('ABORT'))).toBe(

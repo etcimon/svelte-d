@@ -7,7 +7,6 @@ dependency "memutils-wasm" version="~>0.9.0"
 dependency "fast-wasm" version="~>0.9.0"
 dependency "diet-wasm" version="~>0.9.0"
 dflags "--wasm-enable-eh" "-mattr=+exception-handling" "-fvisibility=hidden" "-fno-moduleinfo"
-lflags "-strip-all"
 versions "hmr"
 
 targetPath "public"
@@ -24,7 +23,7 @@ buildRequirements "allowWarnings"
 configuration "application" {
     targetType "executable"
     dflags "-link-internally" "-defaultlib=" "--foptimize-nothrow=false" "-disable-linker-strip-dead"
-    lflags "-strip-all" "--export=svelte_engine_eh_probe" "--export=svelte_engine_phobos_probe" "--export=jsCallback" "--export=jsCallback0"
+    lflags "--export=svelte_engine_eh_probe" "--export=svelte_engine_phobos_probe" "--export=jsCallback" "--export=jsCallback0"
     postBuildCommands "node -e \"require('fs').copyFileSync('public/svelte-engine-raw.wasm','public/svelte-engine.wasm')\""
     dependency "libwasm" version="~master" repository="git+https://github.com/etcimon/libwasm.git"
     subConfiguration "libwasm" "ldc-master"
@@ -35,7 +34,7 @@ configuration "application" {
 configuration "ldc-master" {
     targetType "executable"
     dflags "-link-internally" "-defaultlib=" "--foptimize-nothrow=false" "-disable-linker-strip-dead"
-    lflags "-strip-all" "--export=svelte_engine_eh_probe" "--export=svelte_engine_phobos_probe" "--export=jsCallback" "--export=jsCallback0"
+    lflags "--export=svelte_engine_eh_probe" "--export=svelte_engine_phobos_probe" "--export=jsCallback" "--export=jsCallback0"
     postBuildCommands "node -e \"require('fs').copyFileSync('public/svelte-engine-raw.wasm','public/svelte-engine.wasm')\""
     dependency "libwasm" version="~master" repository="git+https://github.com/etcimon/libwasm.git"
     subConfiguration "libwasm" "ldc-master"
@@ -63,4 +62,14 @@ configuration "ldc-1.36" {
     subConfiguration "libwasm" "ldc-1.36"
     subConfiguration "memutils-wasm" "ldc-1.36"
     subConfiguration "fast-wasm" "ldc-1.36"
+}
+
+# `svelte-d wasm --debug` keeps symbols. `svelte-d wasm` / `--release` strips.
+buildType "debug" {
+    buildOptions "debugMode" "debugInfo"
+}
+
+buildType "release" {
+    buildOptions "releaseMode" "optimize" "inline"
+    lflags "-strip-all"
 }
