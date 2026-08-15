@@ -18,7 +18,7 @@ describe('wasm cell inside svelte-engine-ws', () => {
     // 0 = built, 3 = no wasm LDC (gated)
     expect([0, 3]).toContain(r.status)
     if (r.status === 3) {
-      expect(r.stdout + r.stderr).toMatch(/skip|ldc2-build/)
+      expect(r.stdout + r.stderr).toMatch(/skip|LDC 1\.43|SVELTE_D_LDC|ldc2-build/)
       return
     }
     const raw = join(ws, 'public', 'svelte-engine-raw.wasm')

@@ -441,3 +441,9 @@ Pegged `asModule` vs scan; HMR port 3579 vs 3001; `bun install` in ws for Vite; 
 | 2026-08-14 | pack | svelte-engine packaged in svelte-d; drop → svelte-engine-ws; isolated bun import |
 | 2026-08-15 | libwasm | engine dub.sdl uses ~master + git fetch; add-local checkout wins |
 | 2026-08-15 | pkg | repo-root svelte-d package; bun install builds CLI; GHA CI |
+| 2026-08-15 | ext | engine-setup 1.43 + extensions plan (svelte pkg / scss / jquery / lang=ts splice) |
+| 2026-08-15 | ingest | imported node_modules .svelte + project ts/scss onto ws; not package.json dump |
+| 2026-08-15 | engine | drop 3dify/comfy/prisma; vibe.0 serveStaticFiles public/; pin wasm 1.43 |
+| 2026-08-15 | cfg | svelte-d.config.ts workspace → project-root svelte-engine-ws; drop generateSourceMap/capacitor |
+| 2026-08-15 | ldc | one LDC 1.43 for CLI/host/wasm; bunx svelte-d setup on win/mac/linux |
+| 2026-08-15 | docs | docs/ Nextra site: lang→D IR + simplified admin example |

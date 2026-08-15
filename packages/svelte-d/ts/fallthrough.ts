@@ -176,6 +176,19 @@ export function mapKitPath(kitRel: string): Fallthrough {
     }
   }
   if (base.endsWith('.svelte')) {
+    const ext = extPackageRel(rel)
+    if (ext) {
+      return {
+        kitRel: rel,
+        kind: 'ext_component',
+        cell: 'wasm',
+        runtime: 'libwasm+jsExports',
+        srcSvelte: posix('src-svelte/ext', ext.pkg, ext.rest),
+        srcD: posix('src-d/ext', ext.pkg, sanitizeDestDir(dirOf(ext.rest)), dStem(base) + '.d'),
+        srcTs: posix('src-ts/modules/generated', identFromRel('ext/' + ext.pkg + '/' + ext.rest) + '.ts'),
+        host: '',
+      }
+    }
     return {
       kitRel: rel,
       kind: 'component',
@@ -184,6 +197,18 @@ export function mapKitPath(kitRel: string): Fallthrough {
       srcSvelte,
       srcD: posix('src-d', dir, dStem(base) + '.d'),
       srcTs: posix('src-ts/modules/generated', identFromRel(rel) + '.ts'),
+      host: '',
+    }
+  }
+  if (rel.replace(/\\/g, '/').startsWith('public/')) {
+    return {
+      kitRel: rel,
+      kind: 'static',
+      cell: 'host',
+      runtime: 'vibe.0-static',
+      srcSvelte: rel.replace(/\\/g, '/'),
+      srcD: '',
+      srcTs: '',
       host: '',
     }
   }
@@ -199,7 +224,59 @@ export function mapKitPath(kitRel: string): Fallthrough {
       host: '',
     }
   }
+  if (base.endsWith('.ts') || base.endsWith('.js')) {
+    return {
+      kitRel: rel,
+      kind: 'ts_helper',
+      cell: 'wasm',
+      runtime: 'src-ts',
+      srcSvelte: '',
+      srcD: '',
+      srcTs: posix('src-ts/modules/helpers', sanitizeDestDir(rel)),
+      host: '',
+    }
+  }
+  if (base.endsWith('.scss') || base.endsWith('.sass') || base.endsWith('.css')) {
+    const dest = rel.replace(/\\/g, '/').startsWith('styles/')
+      ? rel.replace(/\\/g, '/')
+      : posix('styles', sanitizeDestDir(rel))
+    return {
+      kitRel: rel,
+      kind: 'style',
+      cell: 'wasm',
+      runtime: 'vite-css',
+      srcSvelte: '',
+      srcD: '',
+      srcTs: dest,
+      host: '',
+    }
+  }
   return empty()
+}
+
+function dirOf(rel: string): string {
+  const s = rel.replace(/\\/g, '/')
+  const i = s.lastIndexOf('/')
+  return i < 0 ? '' : s.slice(0, i)
+}
+
+/** `node_modules/svelte-grid/src/Grid.svelte` or `@scope/pkg/...`. */
+function extPackageRel(
+  rel: string
+): { pkg: string; rest: string } | null {
+  let s = rel.replace(/\\/g, '/')
+  if (s.startsWith('node_modules/')) s = s.slice('node_modules/'.length)
+  else return null
+  if (s.startsWith('@')) {
+    const slash = s.indexOf('/')
+    if (slash < 0) return null
+    const slash2 = s.indexOf('/', slash + 1)
+    if (slash2 < 0) return { pkg: s.slice(0, slash) + '/' + s.slice(slash + 1), rest: '' }
+    return { pkg: s.slice(0, slash2), rest: s.slice(slash2 + 1) }
+  }
+  const slash = s.indexOf('/')
+  if (slash < 0) return { pkg: s, rest: '' }
+  return { pkg: s.slice(0, slash), rest: s.slice(slash + 1) }
 }
 
 type KitSeg = { text: string; optional: boolean }

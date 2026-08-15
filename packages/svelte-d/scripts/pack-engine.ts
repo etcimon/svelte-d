@@ -35,7 +35,9 @@ function skipPart(name: string): boolean {
     b === '.git' ||
     b === '.svelte-d' ||
     b === 'prisma' ||
-    b === 'integrations'
+    b === 'integrations' ||
+    b === 'generatesourcemap.py' ||
+    b === 'capacitor.config.json'
   )
     return true
   if (
@@ -55,6 +57,13 @@ function skipRel(rel: string): boolean {
   const posix = rel.replace(/\\/g, '/')
   if (posix.startsWith('src-svelte/routes/admin')) return true
   if (posix.startsWith('webserver/certs')) return true
+  if (posix.startsWith('webserver/prisma')) return true
+  if (posix === 'webserver/3dify.json' || posix.endsWith('/3dify.json')) return true
+  if (posix.endsWith('comfyapi.d') || posix.endsWith('workflow_api.json')) return true
+  if (posix === 'generateSourceMap.py' || posix.endsWith('/generateSourceMap.py'))
+    return true
+  if (posix === 'capacitor.config.json' || posix.endsWith('/capacitor.config.json'))
+    return true
   return false
 }
 

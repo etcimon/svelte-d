@@ -15,6 +15,7 @@ import svelte_d.parse.dlang;
 import svelte_d.workspace.drop;
 import svelte_d.workspace.files;
 import svelte_d.workspace.ingest;
+import svelte_d.workspace.wasm_build;
 import svelte_d.print.ts_attach;
 import svelte_d.print.d_attach;
 import svelte_d.print.kit_router;
@@ -57,6 +58,7 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 	auto tpl = templateDir(root);
 	if (!exists(ws))
 		dropWorkspace(ws, tpl, false);
+	pinWasmToolchain(ws);
 	if (!project.length)
 		project = detectKitProject();
 	if (project.length)

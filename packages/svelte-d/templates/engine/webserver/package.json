@@ -1,11 +1,8 @@
 {
   "private": true,
-  "name": "slideshow3dai-webserver",
-  "description": "Mostly used for handling DB migrations",
+  "name": "svelte-engine-server",
+  "description": "vibe.0 host for svelte-engine-ws",
   "version": "1.0.0",
-  "author": "Etienne Cimon <etienne@psxai.com>",
   "dependencies": {},
-  "devDependencies": {
-    "@prisma/client": "^6.4.0"
-  }
+  "devDependencies": {}
 }

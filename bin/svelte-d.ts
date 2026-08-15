@@ -13,6 +13,15 @@ const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const exeName = process.platform === 'win32' ? 'svelte-d.exe' : 'svelte-d'
 const exe = join(root, 'packages', 'svelte-d', 'bin', exeName)
 
+if (process.argv[2] === 'setup') {
+  const setup = join(root, 'scripts', 'setup-platform.ts')
+  const r = spawnSync(process.execPath, [setup, ...process.argv.slice(3)], {
+    cwd: root,
+    stdio: 'inherit',
+  })
+  process.exit(r.status ?? 1)
+}
+
 if (!existsSync(exe)) {
   const build = join(root, 'scripts', 'build-cli.ts')
   const b = spawnSync(process.execPath, [build], { cwd: root, stdio: 'inherit' })

@@ -59,7 +59,7 @@ describe('svelte-d is an importable ts+exe/lib library', () => {
     const r = runCli(['version'])
     expect(r.status).toBe(0)
     expect(r.via).toBe('exe')
-    expect(r.stdout.trim()).toBe('1')
+    expect(r.stdout.trim().split(/\r?\n/)[0]).toBe('1')
   })
 })
 

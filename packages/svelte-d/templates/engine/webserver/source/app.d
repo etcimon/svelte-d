@@ -67,13 +67,14 @@ void main()
 	proxy_settings.clientSettings = new HTTPClientSettings;
 	proxy_settings.clientSettings.defaultKeepAliveTimeout = 20.seconds;
 	proxy_settings.clientSettings.http2.disable = true;
+	//// Static files: workspace public/ (project public/ ingested here).
+	//// Missing files fall through (no failIfNotFound) so Vite can still HMR.
+	{
+		HTTPFileServerSettings fsettings = new HTTPFileServerSettings;
+		fsettings.options = HTTPFileServerOption.none;
+		router.get("*", serveStaticFiles("../public/", fsettings));
+	}
 	router.get("*", reverseProxyRequest(proxy_settings));
-	
-	//// File Server
-	//router.get("/updates/*", serveStaticFiles("./"));
-	//HTTPFileServerSettings fsettings = new HTTPFileServerSettings;
-	//fsettings.serverPathPrefix = "/files/";
-	//router.get("/files/*", serveStaticFiles("./files/", fsettings));
 
 	//// Mail Client
 	mailer = new SMTPClientSettings("localhost", 25);

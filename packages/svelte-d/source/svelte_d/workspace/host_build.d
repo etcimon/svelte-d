@@ -2,32 +2,21 @@
 // SPDX-License-Identifier: MIT
 //
 // Host cell: dub build inside svelte-engine-ws/webserver (vibe.0).
-// Never build the svelte-engine template. Host LDC is setenv.ps1 1.42, not wasm 1.43.
+// Never build the svelte-engine template. Same LDC 1.43 as the wasm cell.
 module svelte_d.workspace.host_build;
 
 import std.conv : to;
 import std.file : exists, mkdirRecurse, writeText = write;
-import std.path : buildPath, dirName;
+import std.path : buildPath;
 import std.process : execute, environment, Config;
 import std.stdio : writeln, stderr;
 import std.string : format, replace;
-import svelte_d.workspace.drop;
+import svelte_d.workspace.ldc : findLdc, ensureHostAddLocals;
 
-/// Host-cell LDC (1.42). Not riscv-compilers/ldc2-build (wasm-eh).
+/// Host-cell LDC — same 1.43+ binary as wasm (`findLdc`).
 string findHostLdc(string riscvDev = null)
 {
-	if (!riscvDev.length)
-		riscvDev = findRiscvDev();
-	auto p = buildPath(riscvDev, "toolchains", "ldc2-1.42.0-windows-x64", "bin", "ldc2.exe");
-	if (exists(p))
-		return p;
-	p = buildPath(riscvDev, "toolchains", "ldc2-1.42.0-windows-x64", "bin", "ldc2");
-	if (exists(p))
-		return p;
-	p = buildPath(riscvDev, "toolchains", "ldc2-1.42.0-linux-x64", "bin", "ldc2");
-	if (exists(p))
-		return p;
-	return "";
+	return findLdc(riscvDev);
 }
 
 /// 0 = built, 2 = dub failed, 3 = host LDC missing.
@@ -42,9 +31,10 @@ int buildHostCell(string ws)
 	auto ldc = findHostLdc();
 	if (!ldc.length)
 	{
-		writeln("host: skip — no riscv-dev/toolchains/ldc2-1.42 (host cell)");
+		writeln("host: skip — no LDC 1.43 (bunx svelte-d setup; set SVELTE_D_LDC)");
 		return 3;
 	}
+	ensureHostAddLocals();
 	mkdirRecurse(buildPath(ws, ".svelte-d"));
 	auto env = environment.toAA();
 	env.remove("DFLAGS");

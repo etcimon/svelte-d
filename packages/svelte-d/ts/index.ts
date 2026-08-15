@@ -31,11 +31,22 @@ export {
   bundledTemplateDir,
   isSvelteDPackage,
   kitProjectDir,
+  findKitProjectRoot,
   nativeExe,
   nativeLib,
   nativeArtifacts,
   pkgRoot,
 } from './paths.ts'
+export {
+  defineConfig,
+  loadSvelteDConfig,
+  findSvelteDConfigPath,
+  resolveConfigWorkspace,
+  parseWorkspaceField,
+  svelteDConfigNames,
+  type SvelteDConfig,
+  type LoadedSvelteDConfig,
+} from './config.ts'
 export {
   mapKitPath,
   normalizeKitRel,
@@ -111,6 +122,20 @@ export {
   type AdapterReport,
   type ManifestV1,
 } from './adapter.ts'
+export {
+  hostTriple,
+  findLdc,
+  findDub,
+  findVibe0Checkout,
+  setupPlatform,
+  downloadLdc,
+  ldcDownloadUrl,
+  isLdc143,
+  isLdc143Text,
+  DEFAULT_LDC_VERSION,
+  type HostTriple,
+  type PlatformReport,
+} from './platform.ts'
 export {
   parseWasmNames,
   writeWasmNameMap,

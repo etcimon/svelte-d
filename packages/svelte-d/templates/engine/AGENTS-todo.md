@@ -11,4 +11,4 @@
 ## Next
 
 - Printer (svelte-D PR3): emit `src-d/` from `src-svelte/` `<script lang="d">`
-- Optional: restore GeoLite2 (`dmaxminddb` needs a Phobos-current pin); restore `comfyapi.d`
+- Optional: restore GeoLite2 (`dmaxminddb` needs a Phobos-current pin)

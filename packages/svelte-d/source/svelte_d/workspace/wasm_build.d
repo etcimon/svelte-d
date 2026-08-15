@@ -6,28 +6,22 @@
 // Never build the svelte-engine template. Default config is wasm-eh (application).
 module svelte_d.workspace.wasm_build;
 
+import std.algorithm : canFind;
 import std.conv : to;
 import std.datetime.systime : SysTime;
-import std.file : exists, copy, mkdirRecurse, writeText = write, timeLastModified, dirEntries, SpanMode;
+import std.file : exists, copy, mkdirRecurse, writeText = write, timeLastModified, dirEntries, SpanMode, getcwd, readText;
 import std.path : buildPath, dirName, extension;
 import std.process : execute, environment, Config;
 import std.stdio : writeln, stderr;
-import std.string : format, replace;
+import std.string : format, replace, splitLines, strip, indexOf;
 import svelte_d.workspace.drop;
 import svelte_d.workspace.wasm_objects;
+import svelte_d.workspace.ldc : findLdc;
 
-/// LDC that emits try_table (1.43 / master). Not host setenv.ps1 1.42.
+/// Same 1.43+ compiler as the host cell (`findLdc`).
 string findWasmLdc(string riscvDev = null)
 {
-	if (!riscvDev.length)
-		riscvDev = findRiscvDev();
-	auto p = buildPath(dirName(riscvDev), "riscv-compilers", "ldc2-build", "bin", "ldc2.exe");
-	if (exists(p))
-		return p;
-	p = buildPath(dirName(riscvDev), "riscv-compilers", "ldc2-build", "bin", "ldc2");
-	if (exists(p))
-		return p;
-	return "";
+	return findLdc(riscvDev);
 }
 
 SysTime newestWasmInput(string ws)
@@ -81,6 +75,40 @@ void ensureLibwasmAddLocal()
 		stderr.writeln("wasm: add-local failed: ", r.output);
 }
 
+/// Record LDC 1.43 and point ws vite `dub --compiler=` at it. Never writes 1.42.
+void pinWasmToolchain(string ws)
+{
+	auto ldc = findWasmLdc();
+	mkdirRecurse(buildPath(ws, ".svelte-d"));
+	auto posix = ldc.replace(`\`, `/`);
+	writeText(buildPath(ws, ".svelte-d", "wasm-ldc.json"),
+		format(`{"schema":"svelte-d-wasm-ldc/v1","ldc":"%s","cell":"wasm-eh","ok":%s}` ~ "\n",
+			posix, ldc.length ? "true" : "false"));
+	if (!ldc.length)
+	{
+		writeln("wasm-ldc: missing (run bunx svelte-d setup; needs LDC 1.43)");
+		return;
+	}
+	writeln("wasm-ldc: ", ldc);
+	auto vite = buildPath(ws, "vite.config.js");
+	if (!exists(vite))
+		return;
+	auto src = readText(vite);
+	enum key = "--compiler=";
+	auto i = src.indexOf(key);
+	if (i < 0)
+		return;
+	auto j = i + key.length;
+	if (j < src.length && (src[j] == '\'' || src[j] == '"'))
+		++j;
+	auto end = j;
+	while (end < src.length && src[end] != ' ' && src[end] != '\'' && src[end] != '"' && src[end] != '\n')
+		++end;
+	auto next = src[0 .. i] ~ key ~ posix ~ src[end .. $];
+	if (next != src)
+		writeText(vite, next);
+}
+
 /// 0 = built or skipped (fresh), 2 = dub/IR failed, 3 = wasm LDC missing.
 int buildWasmCell(string ws, string config = "application", bool force = false)
 {
@@ -90,10 +118,11 @@ int buildWasmCell(string ws, string config = "application", bool force = false)
 		return 2;
 	}
 	ensureLibwasmAddLocal();
+	pinWasmToolchain(ws);
 	auto ldc = findWasmLdc();
 	if (!ldc.length)
 	{
-		writeln("wasm: skip — no riscv-compilers/ldc2-build/bin/ldc2 (wasm-eh cell)");
+		writeln("wasm: skip — no LDC 1.43 (bunx svelte-d setup; set SVELTE_D_LDC)");
 		return 3;
 	}
 	auto publicDir = buildPath(ws, "public");

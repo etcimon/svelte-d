@@ -47,10 +47,22 @@ describe('svelte-engine is packaged inside svelte-d', () => {
     expect(tpl.replace(/\\/g, '/')).toMatch(/svelte-engine|templates\/engine/)
     const ws = workspaceDir(host)
     expect(ws.replace(/\\/g, '/')).toMatch(/svelte-engine-ws$/)
+    expect(ws.replace(/\\/g, '/')).not.toMatch(/\/svelte-engine$/)
     if (isSvelteDPackage(host)) {
-      expect(ws.startsWith(host)).toBe(true)
       expect(tpl.startsWith(pkgRoot) || tpl.includes('svelte-engine')).toBe(true)
     }
+  })
+
+  test('packaged engine no longer ships slideshow leftovers', () => {
+    const packaged = join(pkgRoot, 'svelte-engine')
+    const legacy = join(pkgRoot, 'templates', 'engine')
+    const engine = existsSync(join(packaged, 'src-d', 'app.d')) ? packaged : legacy
+    expect(existsSync(join(engine, 'generateSourceMap.py'))).toBe(false)
+    expect(existsSync(join(engine, 'capacitor.config.json'))).toBe(false)
+    expect(existsSync(join(engine, 'integrations'))).toBe(false)
+    const pkg = JSON.parse(readFileSync(join(engine, 'package.json'), 'utf8'))
+    expect(JSON.stringify(pkg)).not.toContain('@capacitor/')
+    expect(pkg.scripts?.['build-capacitor-ios']).toBeUndefined()
   })
 
   test('kitProjectDir only fires on a SvelteKit src/routes tree', () => {

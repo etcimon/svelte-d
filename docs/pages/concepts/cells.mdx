@@ -1,0 +1,18 @@
+---
+title: Wasm vs host
+description: "One LDC 1.43. Two targets — wasm32 libwasm and native vibe.0."
+---
+
+# Wasm vs host
+
+The stack has two *cells* in the sense that matters to a page author, and one *compiler* in the sense that matters to setup. Confusing those two sentences is how people reintroduce a 1.42 host toolchain “just for vibe.0.”
+
+The **wasm cell** is libwasm. It is what `<script lang="d">` and `src-d/` compile to. The target triple is `wasm32-unknown-wasi`. The flags that make D `try/catch` real are `--wasm-enable-eh` and `--foptimize-nothrow=false`. The module is shipped raw — copied from `svelte-engine-raw.wasm` to `svelte-engine.wasm` — because Binaryen 132’s Flatten pass cannot asyncify a `try_table` module. You write `mixin NodeDef`, `this.update`, `UnorderedList`, and same-function `try/catch`. You do not write `import vibe.*`, `std.file`, or `.await`.
+
+The **host cell** is vibe.0. It is what `+page.server.d`, `+server.d`, `+layout.server.d`, and `hooks.server.d` compile to, inside `ws/webserver`. The target is native. You write `HTTPServerRequest`, `registerWebInterface`, `res.writeBody`, `res.redirect`. You do not write `import libwasm` or `mixin Spa`. Class names are dest-unique (`AdminPageServer`, `UsersPageServer`) so every ingested route can hang on `webserver/source/app.d` without colliding.
+
+One LDC 1.43+ compiles both. `findHostLdc` and `findWasmLdc` are the same function. Each `dub build` still clears `DFLAGS` and `DC` so a wasm object cannot be linked into the host and a host Phobos object cannot be linked into wasm. That is “two cells” as *targets*, not as *versions*.
+
+`<script lang="ts">` is neither cell. It is spliced into `src-ts/modules/generated/` and folded into `libwasm.init(modules)` as `jsExports`. jQuery, SCSS, and vanilla helpers stay on Vite. D reaches that JavaScript through `jsExports.env` or `Eval("window.$")`, not through a printed `import jquery` in `src-d/`.
+
+Layouts are worth a special mention because they look like they might be a third cell. They are not. A `+layout.svelte` prints as an `@child` wrapper that **stays mounted**. `KitRoutes` remounts the page inside `@entering`. There is one wasm module and one `mixin Spa!App`. A layout that became its own wasm module would be a second DOM.

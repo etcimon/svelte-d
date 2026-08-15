@@ -30,6 +30,7 @@ void usage()
 	writeln("  kit paths fall through to the same relative structure (src-svelte / src-d / src-ts / webserver)");
 	writeln("  kit features are accommodated in svelte-engine / libwasm / vibe.0; compile integrates the engine");
 	writeln("  svelte-d drop-ws [--dest DIR] [--force]");
+	writeln("      dest default: svelte-d.config.ts/js workspace, else <project>/svelte-engine-ws");
 	writeln("  svelte-d parse <file.svelte|+page.server.d>");
 	writeln("  svelte-d scan [--ws DIR]");
 	writeln("  svelte-d compile [--ws DIR] [--project DIR] [--only FILE]");
@@ -42,6 +43,7 @@ void usage()
 	writeln("  svelte-d kit-routes [--ws DIR]");
 	writeln("  svelte-d wasm [--ws DIR] [--probes] [--force]  # per-.o src-d + relink; dub fallback");
 	writeln("  svelte-d host [--ws DIR]             # dub build in ws/webserver (vibe.0)");
+	writeln("  svelte-d setup                       # find LDC 1.43 + vibe.0 + libwasm");
 	writeln("  svelte-d version");
 }
 
@@ -65,6 +67,7 @@ int main(string[] args)
 				dest = defaultWorkspaceDir(root);
 			dropWorkspace(dest, templateDir(root), force);
 			writeBootstrapFile(dest, templateDir(root));
+			pinWasmToolchain(dest);
 			return 0;
 		}
 		if (cmd == "parse")
@@ -208,6 +211,27 @@ int main(string[] args)
 			auto root = findRiscvDev();
 			ws = wsOrDefault(ws, root);
 			return buildHostCell(ws);
+		}
+		if (cmd == "setup")
+		{
+			import svelte_d.workspace.ldc;
+
+			auto ldc = findLdc();
+			auto dub = findDub(ldc);
+			string lw;
+			try
+				lw = findLibwasmRoot();
+			catch (Exception)
+				lw = findLibwasmCheckout();
+			auto v0 = findVibe0Checkout();
+			if (lw.length)
+				ensureLibwasmAddLocal();
+			ensureHostAddLocals();
+			writeln("ldc\t", ldc.length ? ldc : "(missing — bunx svelte-d setup downloads 1.43)");
+			writeln("dub\t", dub.length ? dub : "(missing)");
+			writeln("libwasm\t", lw.length ? lw : "(dub fetch ~master on first wasm build)");
+			writeln("vibe.0\t", v0.length ? v0 : "(dub registry vibe-0 on first host build)");
+			return ldc.length && dub.length ? 0 : 3;
 		}
 		if (cmd == "version")
 		{

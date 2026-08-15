@@ -27,6 +27,8 @@ unverified:     vibe.0 green; LDC 1.43 + Binaryen 132 asyncify
 | [backend-vibe0.md](backend-vibe0.md) | Server printer, SSR string builders, URLRouter lowering |
 | [compiler-host.md](compiler-host.md) | svelte-d (D) + svelte-kit-d (bun), manifest, cells |
 | [package.md](package.md) | Repo-root bun package; `bun install` builds the CLI; SvelteKit include |
+| [engine-setup.md](engine-setup.md) | LDC 1.43 for svelte-engine-ws wasm; never host 1.42 |
+| [extensions.md](extensions.md) | npm Svelte packages, SCSS/jQuery, `<script lang="ts">` splice |
 | [pegged-grammar.md](pegged-grammar.md) | Pegged Svelte grammar; libdparse; serve-d |
 | [fallthrough.md](fallthrough.md) | **Guiding principle:** kit syntax → equivalent libwasm/vibe.0 tree in the ws |
 | [bootstrap.md](bootstrap.md) | **Guiding principle:** accommodate kit features in svelte-engine / libwasm / vibe.0; compile integrates the engine |

@@ -7,6 +7,7 @@ import std.path;
 import std.stdio : writeln, stderr;
 import std.algorithm : canFind, startsWith;
 import std.string : toLower, replace;
+import svelte_d.workspace.config;
 
 private bool isEngineRoot(string p)
 {
@@ -105,14 +106,25 @@ string templateDir(string riscvDev = null)
 
 string defaultWorkspaceDir(string riscvDev)
 {
+	auto fromCfg = resolveConfigWorkspace();
+	if (fromCfg.length)
+		return fromCfg;
+	auto kit = findKitProjectRoot();
+	if (kit.length)
+		return buildPath(kit, "svelte-engine-ws");
 	if (!riscvDev.length)
 		riscvDev = findRiscvDev();
 	auto here = buildPath(riscvDev, "svelte-engine-ws");
 	if (exists(here))
 		return here;
-	// Installed package: drop next to the packaged engine, not into node_modules/.
+	// Installed package: project cwd, not node_modules/svelte-d.
 	if (isSvelteDPackage(riscvDev))
+	{
+		auto cwd = getcwd();
+		if (!isSvelteDPackage(cwd) && !isEngineRoot(cwd))
+			return buildPath(cwd, "svelte-engine-ws");
 		return here;
+	}
 	auto beside = buildPath(dirName(riscvDev), "svelte-engine-ws");
 	if (exists(beside))
 		return beside;
@@ -238,7 +250,10 @@ string findLibwasmRoot(string riscvDev = null)
 private bool skipName(string name)
 {
 	auto b = baseName(name).toLower;
-	if (b == ".dub" || b == "node_modules" || b == ".svelte-d" || b == ".git")
+	if (b == ".dub" || b == "node_modules" || b == ".svelte-d" || b == ".git"
+			|| b == "prisma" || b == "integrations" || b == "3dify.json" || b == "comfyapi.d"
+			|| b == "workflow_api.json" || b == "generatesourcemap.py"
+			|| b == "capacitor.config.json")
 		return true;
 	if (b.endsWith(".exe") || b.endsWith(".pdb") || b.endsWith(".obj") || b.endsWith(".lib")
 			|| b.endsWith(".wasm"))

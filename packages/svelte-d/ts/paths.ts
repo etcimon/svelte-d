@@ -1,8 +1,9 @@
 // Copyright (c) 2026 Etienne Cimon
 // SPDX-License-Identifier: MIT
 import { existsSync } from 'node:fs'
-import { dirname, join, resolve } from 'node:path'
+import { basename, dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { resolveConfigWorkspace } from './config.ts'
 
 const here = dirname(fileURLToPath(import.meta.url))
 const pkgRoot = resolve(here, '..')
@@ -65,11 +66,42 @@ export function findRiscvDev(start = process.cwd()): string {
   )
 }
 
+/** Walk up for a bun + SvelteKit project. Skips engine / svelte-d package trees. */
+export function findKitProjectRoot(start = process.cwd()): string {
+  let p = resolve(start)
+  for (let i = 0; i < 12; i++) {
+    const b = basename(p).toLowerCase()
+    if (b !== 'node_modules' && b !== 'svelte-engine' && b !== 'svelte-engine-ws') {
+      const kit =
+        existsSync(join(p, 'src', 'routes')) || existsSync(join(p, 'src-svelte'))
+      if (kit && !isEngineRoot(p) && !isSvelteDPackage(p)) return p
+    }
+    const parent = dirname(p)
+    if (parent === p) break
+    p = parent
+  }
+  return ''
+}
+
+/**
+ * Drop dest. Precedence: svelte-d.config.ts/js `workspace`, then
+ * `<kit-project>/svelte-engine-ws`, then an existing checkout sibling,
+ * then `<cwd>/svelte-engine-ws` for an installed package (project top-level,
+ * not node_modules/svelte-d).
+ */
 export function workspaceDir(root = findRiscvDev()) {
+  const fromCfg = resolveConfigWorkspace()
+  if (fromCfg) return fromCfg
+  const kit = findKitProjectRoot()
+  if (kit) return join(kit, 'svelte-engine-ws')
   const here = join(root, 'svelte-engine-ws')
   if (existsSync(here)) return here
-  // Installed package: drop next to the packaged engine, not into node_modules/.
-  if (isSvelteDPackage(root)) return here
+  if (isSvelteDPackage(root)) {
+    const cwd = process.cwd()
+    if (!isSvelteDPackage(cwd) && !isEngineRoot(cwd))
+      return join(cwd, 'svelte-engine-ws')
+    return here
+  }
   const beside = join(dirname(root), 'svelte-engine-ws')
   if (existsSync(beside)) return beside
   return here

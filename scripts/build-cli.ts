@@ -4,11 +4,12 @@
 //
 // Produce bin/svelte-d (native CLI) so `bun install` / `bun run build`
 // leaves a working compiler. Packs svelte-engine if the packaged copy
-// is missing. Does not start a second DOM/HTTP stack.
-import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs'
+// is missing. Uses one LDC 1.43+ for the CLI (same compiler as wasm/host).
+import { existsSync, mkdirSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { findDub, findLdc, setupPlatform } from '../packages/svelte-d/ts/platform.ts'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const compiler = join(root, 'packages', 'svelte-d')
@@ -17,65 +18,6 @@ const exe = join(compiler, 'bin', exeName)
 
 function isEngineRoot(p: string): boolean {
   return existsSync(join(p, 'src-d', 'app.d')) && existsSync(join(p, 'dub.sdl'))
-}
-
-function which(cmd: string): string {
-  const r = spawnSync(process.platform === 'win32' ? 'where' : 'which', [cmd], {
-    encoding: 'utf8',
-    shell: false,
-  })
-  if (r.status !== 0) return ''
-  const line = (r.stdout || '').split(/\r?\n/).map((s) => s.trim()).find(Boolean)
-  return line || ''
-}
-
-function walkTool(start: string, rel: string): string {
-  let p = start
-  for (let i = 0; i < 8; i++) {
-    const cand = join(p, rel)
-    if (existsSync(cand)) return cand
-    const parent = dirname(p)
-    if (parent === p) break
-    p = parent
-  }
-  return ''
-}
-
-function findLdc2(): string {
-  const onPath = which('ldc2')
-  if (onPath) return onPath
-  const name = process.platform === 'win32' ? 'ldc2.exe' : 'ldc2'
-  const fromEnv = process.env.DC
-  if (fromEnv && existsSync(fromEnv)) return fromEnv
-  const toolchains = walkTool(root, join('riscv-dev', 'toolchains'))
-    || walkTool(dirname(root), 'toolchains')
-  if (!toolchains || !existsSync(toolchains)) return ''
-  const dirs = readdirSync(toolchains)
-    .map((n) => join(toolchains, n))
-    .filter((d) => {
-      try {
-        return statSync(d).isDirectory()
-      } catch {
-        return false
-      }
-    })
-    .sort()
-    .reverse()
-  for (const d of dirs) {
-    const cand = join(d, 'bin', name)
-    if (existsSync(cand)) return cand
-  }
-  return ''
-}
-
-function findDub(ldc2: string): string {
-  const onPath = which('dub')
-  if (onPath) return onPath
-  if (ldc2) {
-    const cand = join(dirname(ldc2), process.platform === 'win32' ? 'dub.exe' : 'dub')
-    if (existsSync(cand)) return cand
-  }
-  return ''
 }
 
 function run(cmd: string, args: string[], cwd: string): number {
@@ -98,15 +40,19 @@ function ensurePackedEngine(): void {
   }
 }
 
-function buildNative(): void {
+async function buildNative(): Promise<void> {
   mkdirSync(join(compiler, 'bin'), { recursive: true })
-  const ldc2 = findLdc2()
-  const dub = findDub(ldc2)
+  let ldc2 = findLdc()
+  let dub = findDub(ldc2)
+  if (!ldc2 || !dub) {
+    const report = await setupPlatform({ download: true })
+    ldc2 = report.ldc
+    dub = report.dub
+  }
   if (!ldc2 || !dub) {
     throw new Error(
-      'svelte-d CLI build needs ldc2 + dub on PATH (host cell LDC 1.42). ' +
-        'From riscv-dev: `. .\\setenv.ps1` then `bun install` / `bun run build`. ' +
-        'Missing: ' +
+      'svelte-d CLI build needs LDC 1.43 + dub. Run `bunx svelte-d setup` ' +
+        '(downloads into ~/.svelte-d/toolchains) or set SVELTE_D_LDC. Missing: ' +
         (!ldc2 ? 'ldc2 ' : '') +
         (!dub ? 'dub' : '')
     )
@@ -132,5 +78,5 @@ if (!force && existsSync(exe) && isEngineRoot(packed)) {
   process.exit(0)
 }
 ensurePackedEngine()
-buildNative()
+await buildNative()
 console.log('svelte-d CLI', exe)

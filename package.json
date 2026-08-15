@@ -19,8 +19,11 @@
   "scripts": {
     "prepare": "bun scripts/build-cli.ts",
     "build": "bun scripts/build-cli.ts",
+    "setup": "bun scripts/setup-platform.ts",
+    "docs": "bun --cwd docs run dev",
+    "docs:build": "bun --cwd docs run build",
     "pack-engine": "bun packages/svelte-d/scripts/pack-engine.ts",
-    "test": "bun test packages/svelte-kit-d/test/package-engine.test.ts packages/svelte-kit-d/test/import-library.test.ts packages/svelte-kit-d/test/bootstrap.test.ts packages/svelte-kit-d/test/cli-bin.test.ts"
+    "test": "bun test packages/svelte-kit-d/test/package-engine.test.ts packages/svelte-kit-d/test/import-library.test.ts packages/svelte-kit-d/test/bootstrap.test.ts packages/svelte-kit-d/test/cli-bin.test.ts packages/svelte-kit-d/test/extensions.test.ts packages/svelte-kit-d/test/config.test.ts packages/svelte-kit-d/test/platform.test.ts"
   },
   "files": [
     "bin",

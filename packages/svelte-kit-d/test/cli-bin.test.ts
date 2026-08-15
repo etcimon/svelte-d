@@ -15,6 +15,6 @@ describe('repo-root bun package produces the CLI', () => {
   test('CLI version via bun-forwarded native exe', () => {
     const r = runCli(['version'])
     expect(r.status).toBe(0)
-    expect(r.stdout.trim()).toBe('1')
+    expect(r.stdout.trim().split(/\r?\n/)[0]).toBe('1')
   })
 })

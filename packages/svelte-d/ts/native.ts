@@ -67,14 +67,13 @@ function runExe(args: string[]): RunResult {
 export function dropWorkspace(
   opts: { dest?: string; force?: boolean; via?: Via } = {}
 ): RunResult {
+  const dest = opts.dest ?? workspaceDir()
   if (useFfi(opts.via) && ffi) {
-    const dest = opts.dest ?? workspaceDir()
     const status = ffi.svelte_d_drop_ws(Buffer.from(dest + '\0'), opts.force ? 1 : 0)
     return { status, stdout: '', stderr: '', via: 'ffi' }
   }
-  const args = ['drop-ws']
+  const args = ['drop-ws', '--dest', dest]
   if (opts.force) args.push('--force')
-  if (opts.dest) args.push('--dest', opts.dest)
   return runExe(args)
 }
 

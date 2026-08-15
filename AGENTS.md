@@ -27,8 +27,11 @@ Canonical long-form design (Key Decisions, alternatives, security, full PR plan)
 
 | If the next change is about… | Open |
 |---|---|
+| Human docs site (Svelte → D IR, admin example) | [`docs/`](docs/) |
 | What svelte-D is / is not / host git policy | [`README.md`](README.md) |
 | bun package, CLI build, include in a SvelteKit app | [`architecture/package.md`](architecture/package.md), [`README.md`](README.md) |
+| One LDC 1.43 (CLI + vibe.0 + wasm) on Windows/macOS/Linux | [`architecture/engine-setup.md`](architecture/engine-setup.md) |
+| Third-party Svelte / SCSS / jQuery / lang=ts splice | [`architecture/extensions.md`](architecture/extensions.md) |
 | License of this work **and** of D/LDC/libwasm/vibe.0/Svelte/Binaryen/asyncify | [`LICENSE.md`](LICENSE.md), [`architecture/licensing.md`](architecture/licensing.md) |
 | End-to-end compile + runtime journey | [`architecture/overview.md`](architecture/overview.md) |
 | IR, hashes, `.svelte-d/` cache, incremental cones | [`architecture/ir.md`](architecture/ir.md) |
@@ -57,7 +60,7 @@ Canonical long-form design (Key Decisions, alternatives, security, full PR plan)
 
 - Do not edit libwasm, vibe.0, slideshow3dai, or LDC from a svelte-D pass unless the PR is an explicitly titled **seam** against that tree. **svelte-engine may be updated** — that is how a new kit feature is accommodated. The next compile integrates it as `svelte-engine-ws`.
 - Do not claim a SvelteKit feature works if the feature map marks a seam or out-of-scope.
-- Two cells stay two cells. `setenv-wasm.ps1` ≠ `setenv.ps1`.
+- One LDC 1.43+ for CLI, vibe.0, and wasm. Wasm vs host stay different *targets* (no shared objects / `DFLAGS`).
 - Notes stay specific: cite `file:line` in the existing trees. If unverified (vibe.0 green, 1.43 asyncify), say so.
 - Construction vs convention: if the next change can break it silently, write which one it is.
 - Kit syntax falls through to libwasm / vibe.0 in an equivalent `svelte-engine-ws` tree. Do not invent a third layout.

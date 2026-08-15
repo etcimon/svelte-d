@@ -1,0 +1,36 @@
+---
+title: "{#await}, {#key}, svelte:boundary"
+description: Await is JsPromise.then after render, never .await. Boundary is @visible body/failed. throwBoundary is same-function try/catch.
+---
+
+# `{#await}`, `{#key}`, `<svelte:boundary>`
+
+These three constructs look like control flow and they are the ones that interact with **time**. Time is where the two wasm cells used to diverge: asyncify wanted `.await`, wasm-eh wants `try_table`. The default engine cell is wasm-eh. Everything on this page is written so that a landing pad and `libwasm_await__void` never share a function.
+
+## `{#await}`
+
+```svelte
+{#await job}
+  <p>Wait</p>
+{:then v}
+  <p>Done {v}</p>
+{:catch e}
+  <p>Err</p>
+{/await}
+```
+
+Pending, then, and catch are three `@visible` children of the owner. Then `{v}` is `@prop` named after the binding. The host field is a `JsPromise`. It starts pending. `App.ready` — after `render`, with live handles — calls `wireAwait`, which attaches `job.then` / `.error`. Wiring in `construct` was too early, the same class of bug as `wireEach`. `this.update.await_then` still settles (Combo Go) for the case where you want to flip without a real promise. No job at all: settle to `{:then}` at print time (G87). `{#await job then v}` (no pending block) is the same IR with no pending child.
+
+**Never print `.await`.** Binaryen 132 Flatten cannot asyncify a `try_table` module. A function that both catches and awaits is asking those two worlds to share a frame. Use `JsPromise.then`. If you need the 1.36/1.42 asyncify cell, that is a named alternate config, not the default, and it does not do D `catch`.
+
+## `{#key}`
+
+`{#key expr}` prints a `remount!"child"(this)` helper. The child is torn down and `compile!`’d again. It is not a keyed each and it is not a new list. Fixture: `ComboMore.svelte`. Use it when the child’s identity should change with an expression; do not use it as a poor man’s `{#each}`.
+
+## `<svelte:boundary>`
+
+A boundary is two visibilities, not a second exception runtime. The body is `@visible` with `boundary_ok = true`. `{#snippet failed}` is `@visible` with `boundary_failed = false`. `this.update.boundary_failed` hides the body and shows failed. `this.update.boundary_ok` resets. `{#snippet failed(error, reset)}` plus `onerror` emit `failBoundary` / `resetBoundary`; Retry is the snippet `reset` (G96).
+
+**`throwBoundary`** is the construct that looks like it should be `throw` in one method and `catch` in another. It is not. The `try`, the `throw`, and the `catch` must be in the **same function** on the **same struct** as `trip()` (G105, ComboMedia / ComboSurf). That is the navbar EH path. The exception does not escape `nothrow`. After the catch, the method calls `failBoundary`. Personality is first-catch-type only. An exception that crosses a function boundary is an abort, not a failed snippet.
+
+If you take one rule from this page, take that one. The rest of boundary is `@visible`. The throw path is same-function or it is not a boundary.

@@ -6,19 +6,20 @@ The compiler is a vibe.0 program (host cell) plus TypeScript exports. It parses 
 
 ## BUILD
 
-Host cell only: **LDC 1.42** + `dub` on PATH. In a riscv-dev tree: `. .\setenv.ps1`. Do not use `setenv-wasm.ps1` here.
+One compiler: **LDC 1.43+** for the CLI, the vibe.0 host, and the wasm-eh cell. Windows, macOS (x64/arm64), and Linux (x64/arm64).
 
 ```powershell
 git clone --recurse-submodules https://github.com/etcimon/svelte-d.git
 cd svelte-d
 
+bunx svelte-d setup      # find or download LDC 1.43; dub add-local libwasm + vibe.0
 bun install              # prepare → pack engine if needed + dub build → packages/svelte-d/bin/svelte-d
 bun run build            # rebuild the CLI
 bunx svelte-d version    # prints 1
-bun test                 # package + import + bootstrap
+bun test                 # package + import + bootstrap + platform
 ```
 
-`bun install` in a **consumer** SvelteKit app that depends on this repo runs the same `prepare` script, so `node_modules/.bin/svelte-d` / `bunx svelte-d` works after install (that machine still needs `ldc2` + `dub`).
+`bun install` in a **consumer** SvelteKit app that depends on this repo runs the same `prepare` script. If `ldc2` 1.43 is missing, setup downloads it into `~/.svelte-d/toolchains`. See [`architecture/engine-setup.md`](architecture/engine-setup.md).
 
 ## Use in a Svelte / SvelteKit bun project
 
@@ -33,9 +34,14 @@ bun add github:etcimon/svelte-d
 ```
 
 ```ts
+// svelte-d.config.ts  (project top-level)
+export default { workspace: './svelte-engine-ws' }
+```
+
+```ts
 import { dropWorkspace, compileWorkspace, workspaceDir } from 'svelte-d'
 
-const ws = workspaceDir()
+const ws = workspaceDir() // ./svelte-engine-ws next to svelte-d.config.ts
 dropWorkspace({ dest: ws, force: true })
 compileWorkspace({ ws, project: process.cwd() }) // ingest src/routes + src/lib
 ```
@@ -47,7 +53,7 @@ bunx svelte-d drop-ws --force
 bunx svelte-d compile --project .
 ```
 
-`compile` infers `--project` when cwd has `src/routes`. Output is **`svelte-engine-ws`**, never the packaged `svelte-engine/`. See [`architecture/package.md`](architecture/package.md).
+`compile` infers `--project` when cwd has `src/routes`. Output is **`svelte-engine-ws` at the project root** (or `svelte-d.config.ts` `workspace`), never the packaged `svelte-engine/`. See [`architecture/package.md`](architecture/package.md) and [`architecture/workspace.md`](architecture/workspace.md).
 
 Clone with the engine:
 
@@ -56,6 +62,8 @@ git clone --recurse-submodules https://github.com/etcimon/svelte-d.git
 ```
 
 `svelte-engine/` is the drop source. `libwasm` is located by walking for `source/libwasm/dom.d` (or `riscv-compilers/libwasm` next to a riscv-dev host).
+
+Docs (this site, Next.js + Nextra): [`docs/`](docs/). `bun run docs` serves them locally. The language section teaches every interactive `.svelte` construct and the libwasm D IR it prints.
 
 **Guiding principles:**
 

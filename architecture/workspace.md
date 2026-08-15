@@ -6,12 +6,14 @@ The next change that writes generated D into `svelte-engine/` itself, or invents
 copies it into **`packages/svelte-d/svelte-engine`** (and `templates/engine` as the
 legacy name). A bun + svelte-d consumer does not need a sibling checkout: after
 `bun install`, the engine lives at **`node_modules/svelte-d/svelte-engine`**. `drop-ws`
-copies that tree to **`svelte-engine-ws`** next to it (`node_modules/svelte-d/svelte-engine-ws`
-when the host is the installed package; sibling of the checkout in a riscv-dev /
-svelte-D tree). The compiler must **not** mutate the packaged engine (or the
-submodule) **while compiling an app**. App Svelte / SvelteKit lives in the bun
-project `src/` and is **ingested** onto the dropped workspace (`compile --project`,
-or automatically when cwd has `src/routes`).
+copies that tree to **`svelte-engine-ws`**. Dest order: `svelte-d.config.ts` /
+`.js` / `.json` `workspace` (relative to that file), else `<kit-project>/svelte-engine-ws`,
+else an existing checkout sibling. The default for a consumer app is the **project
+top-level** `./svelte-engine-ws`, not `node_modules/svelte-d/svelte-engine-ws`.
+The compiler must **not** mutate the packaged engine (or the submodule) **while
+compiling an app**. App Svelte / SvelteKit lives in the bun project `src/` and is
+**ingested** onto the dropped workspace (`compile --project`, or automatically when
+cwd has `src/routes`).
 
 Accommodation goldens (`src-svelte/lib/Combo*.svelte`, `Panel.svelte`) stay
 in the bootstrap so printer tests have an idiom library. **Application**
@@ -25,10 +27,11 @@ trees (admin panel, site routes) belong in the project, not in the engine.
 svelte-d drop-ws [--dest <path>]
 ```
 
-Default dest: next to the engine host — `svelte-engine-ws` beside a checkout, or
-`node_modules/svelte-d/svelte-engine-ws` when svelte-d is the installed package
-(**not** inside `svelte-engine/` itself). Copy file-by-file from the packaged
-`svelte-engine/`, excluding `.dub`, `node_modules`, `*.exe`, `*.pdb`, `*.wasm`.
+Default dest: `svelte-d.config.ts` `workspace` (this repo: `./svelte-engine-ws`),
+or `<project>/svelte-engine-ws` when cwd is a SvelteKit tree (**not** inside
+`svelte-engine/` itself, **not** inside `node_modules/svelte-d`). Copy file-by-file
+from the packaged `svelte-engine/`, excluding `.dub`, `node_modules`, `*.exe`,
+`*.pdb`, `*.wasm`, `generateSourceMap.py`, `capacitor.config.json`.
 
 If dest exists and looks like an engine root: require `--force`. `--force` **clears sources** but **keeps** `node_modules`, `.dub`, and `.git` so a leftover Vite cannot fail `rmdirRecurse` with “file in use”. An empty leftover dest (failed prior drop) is reused without `--force`. Locked individual files are skipped and logged.
 
@@ -59,12 +62,14 @@ The template is the golden. IR experiments must not destroy it. slideshow3dai st
 `packages/svelte-d/templates/engine` — legacy packaged name  
 `packages/svelte-d/scripts/pack-engine.ts` — sync from the svelte-engine submodule  
 `packages/svelte-d/source/svelte_d/workspace/drop.d` — drop implementation  
+`packages/svelte-d/source/svelte_d/workspace/config.d` — `svelte-d.config.ts/js` dest  
+`packages/svelte-d/ts/config.ts` — same dest policy on the bun side  
 `packages/svelte-d/source/svelte_d/workspace/ingest.d` — project `src/` overlay  
 
 ## Invariants
 
 - svelte-d never `dub build`s the template directory. (construction)
-- wasm and host cells inside the ws still use `setenv-wasm.ps1` vs `setenv.ps1`. (construction)
+- wasm and host cells inside the ws share LDC 1.43 but still clear `DFLAGS`/`DC` so objects do not mix. (construction)
 - Generated D in `ws/src-d/` is a function of IR; hand-edits there lose to the next print. Hand-edits in the **template** `src-d/` are the golden. (construction)
 - `svelte-engine-ws` is generated; do not admit it to the host ledger. (convention)
 
@@ -74,4 +79,5 @@ A new template (e.g. spa-only) is a second bootstrap dir + a `--template` flag, 
 
 ## Did not close
 
-Dest is sibling `svelte-engine-ws` of a checkout, or `node_modules/svelte-d/svelte-engine-ws` when the host is the installed package. Certs/keys are not packed.
+Dest is configurable (`svelte-d.config.ts` `workspace`). Default is the consuming
+project’s top-level `./svelte-engine-ws`. Certs/keys are not packed.

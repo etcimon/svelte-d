@@ -24,7 +24,7 @@ svelte-d inspect
 svelte-kit-d adapt <static|libwasm-spa|vibe0|vibe0-proxy> --out <dir>
 ```
 
-`drop-ws` copies the **packaged** `svelte-engine/` (inside svelte-d, or the submodule) to **`svelte-engine-ws`**. `build` compiles **inside** that workspace (see [workspace.md](workspace.md)). svelte-d itself is always the **host cell** (LDC 1.42 + `setenv.ps1`). It never links libwasm.
+`drop-ws` copies the **packaged** `svelte-engine/` (inside svelte-d, or the submodule) to **`svelte-engine-ws`** (default: `svelte-d.config.ts` `workspace` at the project root). `build` compiles **inside** that workspace (see [workspace.md](workspace.md)). svelte-d itself is native LDC 1.43 (`bunx svelte-d setup`). It never links libwasm.
 
 Parse path:
 

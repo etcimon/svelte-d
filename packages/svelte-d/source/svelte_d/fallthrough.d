@@ -24,7 +24,7 @@ import svelte_d.parse.kit_fs;
 struct Fallthrough
 {
 	string kitRel; /// routes/+page.svelte  (no src/ or src-svelte/ prefix)
-	string kind; /// page | layout | page_server | layout_server | endpoint | error | component | d | hooks
+	string kind; /// page | layout | page_server | layout_server | endpoint | error | component | ext_component | ts_helper | style | d | hooks
 	string cell; /// wasm | host | both
 	string runtime; /// libwasm | libwasm+jsExports | vibe.0
 	string srcSvelte; /// src-svelte/…
@@ -241,11 +241,33 @@ Fallthrough mapKitRel(string kitRel)
 	}
 	if (extension(b) == ".svelte")
 	{
+		string pkg, rest;
+		if (splitExtPackage(rel, pkg, rest))
+		{
+			f.kind = "ext_component";
+			f.cell = "wasm";
+			f.runtime = "libwasm+jsExports";
+			f.srcSvelte = posix("src-svelte/ext", pkg, rest);
+			auto restDir = dirName(rest);
+			if (restDir == "." || restDir == "")
+				restDir = "";
+			f.srcD = posix(posix("src-d/ext", pkg), sanitizeDestDir(restDir), dStem(b) ~ ".d");
+			f.srcTs = posix("src-ts/modules/generated", identFromRel("ext/" ~ pkg ~ "/" ~ rest) ~ ".ts");
+			return f;
+		}
 		f.kind = "component";
 		f.cell = "wasm";
 		f.runtime = "libwasm+jsExports";
 		f.srcD = posix("src-d", dir, dStem(b) ~ ".d");
 		f.srcTs = posix("src-ts/modules/generated", identFromRel(rel) ~ ".ts");
+		return f;
+	}
+	if (rel.replace(`\`, `/`).startsWith("public/"))
+	{
+		f.kind = "static";
+		f.cell = "host";
+		f.runtime = "vibe.0-static";
+		f.srcSvelte = rel.replace(`\`, `/`);
 		return f;
 	}
 	if (extension(b) == ".d")
@@ -256,9 +278,66 @@ Fallthrough mapKitRel(string kitRel)
 		f.srcD = posix("src-d", sanitizeDestDir(rel));
 		return f;
 	}
+	if (extension(b) == ".ts" || extension(b) == ".js")
+	{
+		f.kind = "ts_helper";
+		f.cell = "wasm";
+		f.runtime = "src-ts";
+		f.srcSvelte = "";
+		f.srcTs = posix("src-ts/modules/helpers", sanitizeDestDir(rel));
+		return f;
+	}
+	if (extension(b) == ".scss" || extension(b) == ".sass" || extension(b) == ".css")
+	{
+		f.kind = "style";
+		f.cell = "wasm";
+		f.runtime = "vite-css";
+		f.srcSvelte = "";
+		auto n = rel.replace(`\`, `/`);
+		f.srcTs = n.startsWith("styles/") ? n : posix("styles", sanitizeDestDir(rel));
+		return f;
+	}
 	f.kind = "unknown";
 	f.cell = "wasm";
 	return f;
+}
+
+/// `node_modules/svelte-grid/src/Grid.svelte` or `@scope/pkg/...`.
+private bool splitExtPackage(string rel, out string pkg, out string rest)
+{
+	auto s = rel.replace(`\`, `/`);
+	enum pfx = "node_modules/";
+	if (!s.startsWith(pfx))
+		return false;
+	s = s[pfx.length .. $];
+	if (!s.length)
+		return false;
+	if (s[0] == '@')
+	{
+		auto slash = s.indexOf('/');
+		if (slash < 0)
+			return false;
+		auto slash2 = s.indexOf('/', slash + 1);
+		if (slash2 < 0)
+		{
+			pkg = s;
+			rest = "";
+			return true;
+		}
+		pkg = s[0 .. slash2];
+		rest = s[slash2 + 1 .. $];
+		return true;
+	}
+	auto slash = s.indexOf('/');
+	if (slash < 0)
+	{
+		pkg = s;
+		rest = "";
+		return true;
+	}
+	pkg = s[0 .. slash];
+	rest = s[slash + 1 .. $];
+	return true;
 }
 
 private struct KitSeg

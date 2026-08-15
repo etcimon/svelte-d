@@ -19,6 +19,12 @@ src/routes/+page.server.ts|.d        →  src-svelte/routes/+page.server.*
                                                                            vibe.0 URLRouter / registerWebInterface
 src/routes/+server.ts|.d             →  webserver/source/generated/routes/server.d
 src/hooks.server.ts                  →  webserver/source/generated/hooks.d
+src/lib/jquery-bridge.ts             →  src-ts/modules/helpers/lib/jquery-bridge.ts
+src/styles/app.scss                  →  styles/app.scss
+node_modules/svelte-grid/Grid.svelte →  src-svelte/ext/svelte-grid/Grid.svelte
+                                     →  src-d/ext/svelte-grid/Grid.d
+                                     →  src-ts/modules/generated/…     lang=ts splice
+public/logo.png                      →  public/logo.png                vibe.0 serveStaticFiles
 app.html                             →  index.html / SSR skeleton
 ```
 

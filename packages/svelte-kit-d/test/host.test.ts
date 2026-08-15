@@ -38,7 +38,7 @@ describe('host cell inside svelte-engine-ws/webserver', () => {
     const r = buildHost(ws)
     expect([0, 3]).toContain(r.status)
     if (r.status === 3) {
-      expect(r.stdout + r.stderr).toMatch(/skip|ldc2-1\.42/)
+      expect(r.stdout + r.stderr).toMatch(/skip|LDC 1\.43|SVELTE_D_LDC/)
       return
     }
     const exe = join(ws, 'webserver', 'svelte-engine-server.exe')

@@ -6,7 +6,7 @@ D compiler (vibe.0 + Pegged + libdparse) that turns SvelteKit-shaped sources int
 
 ```powershell
 cd riscv-dev
-. .\setenv.ps1
+bunx svelte-d setup    # LDC 1.43 + dub; add-local libwasm / vibe.0 when present
 cd svelte-D\packages\svelte-d
 dub build --config=application --compiler=ldc2
 dub build --config=library --compiler=ldc2
@@ -16,6 +16,6 @@ dub run --compiler=ldc2 -- drop-ws --force
 dub run --compiler=ldc2 -- scan --ws ..\..\..\svelte-engine-ws
 ```
 
-A bun project depends on `"svelte-d"` and `import { compileWorkspace, dropWorkspace, mapKitPath, adaptWorkspace } from 'svelte-d'`. The package **ships `svelte-engine/`** (`bun scripts/pack-engine.ts`). After `bun install`, drop copies `node_modules/svelte-d/svelte-engine` → `node_modules/svelte-d/svelte-engine-ws` (or the checkout sibling in this repo). `compile` then ingest the project's `src/` Svelte / SvelteKit (`--project`, or automatically when cwd has `src/routes`). Adapters (`adapter-static`, `adapter-libwasm-spa`, `adapter-vibe0`, `adapter-vibe0-proxy`) call `adaptWorkspace` and write `out/adapter.json`.
+A bun project depends on `"svelte-d"` and `import { compileWorkspace, dropWorkspace, mapKitPath, adaptWorkspace } from 'svelte-d'`. The package **ships `svelte-engine/`** (`bun scripts/pack-engine.ts`). After `bun install`, drop copies `node_modules/svelte-d/svelte-engine` → the dest from **`svelte-d.config.ts`** (`workspace: './svelte-engine-ws'` at the project root by default). `compile` then ingest the project's `src/` Svelte / SvelteKit (`--project`, or automatically when cwd has `src/routes`). Adapters (`adapter-static`, `adapter-libwasm-spa`, `adapter-vibe0`, `adapter-vibe0-proxy`) call `adaptWorkspace` and write `out/adapter.json`.
 
 See `../../architecture/` (fallthrough.md, pegged-grammar.md, workspace.md, compiler-host.md).
