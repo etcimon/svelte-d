@@ -22,6 +22,19 @@ if (process.argv[2] === 'setup') {
   process.exit(r.status ?? 1)
 }
 
+if (process.argv[2] === 'wasm' || process.argv[2] === 'build') {
+  const { ensureForkedWasmOpt } = await import('../packages/svelte-d/ts/platform.ts')
+  try {
+    const bin = await ensureForkedWasmOpt()
+    if (bin) process.env.SVELTE_D_WASM_OPT = bin
+  } catch (e) {
+    console.warn(
+      'svelte-d: forked wasm-opt download skipped —',
+      e instanceof Error ? e.message : e
+    )
+  }
+}
+
 if (!existsSync(exe)) {
   const build = join(root, 'scripts', 'build-cli.ts')
   const b = spawnSync(process.execPath, [build], { cwd: root, stdio: 'inherit' })

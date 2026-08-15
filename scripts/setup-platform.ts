@@ -14,7 +14,7 @@ console.log('dub     ', report.dub || '(missing)')
 console.log(
   'wasm-opt',
   report.wasmOpt ||
-    '(missing — bunx svelte-d setup downloads the fork wasm-opt into binaryen-build/)'
+    '(missing — bunx svelte-d setup downloads darwin-arm64 / host triple into binaryen-build/)'
 )
 console.log('libwasm ', report.libwasm || '(dub fetch ~master on first wasm build)')
 console.log('vibe.0  ', report.vibe0 || '(dub registry vibe-0 on first host build)')

@@ -91,7 +91,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: wasm-opt-${{ matrix.variant }}
-          path: binaryen-build/dist/wasm-opt-${{ matrix.variant }}.tar.gz
+          path: |
+            binaryen-build/dist/wasm-opt-${{ matrix.variant }}.tar.gz
+            binaryen-build/${{ matrix.variant }}/
           if-no-files-found: error
 
   publish:

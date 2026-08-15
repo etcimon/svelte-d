@@ -16,6 +16,7 @@ import {
   forkedWasmOptHome,
   forkedWasmOptDownloadUrl,
   forkedWasmOptDownloadUrls,
+  forkedWasmOptArtifactUrls,
   hostTriple,
   DEFAULT_WASM_OPT_RELEASE,
   isForkedWasmOpt,
@@ -122,8 +123,18 @@ describe('Binaryen ≥123 wasm-opt (try_table parse, no asyncify)', () => {
     expect(forkedWasmOptDownloadUrls('linux-x86_64')).toContain(
       'https://github.com/etcimon/svelte-d/raw/wasm-opt-binaries/wasm-opt-linux-x86_64.tar.gz'
     )
+    expect(forkedWasmOptDownloadUrls('darwin-arm64')).toContain(
+      'https://github.com/etcimon/svelte-d/releases/download/wasm-opt-svelte-d/wasm-opt-darwin-arm64.tar.gz'
+    )
+    expect(forkedWasmOptArtifactUrls('darwin-arm64')).toContain(
+      'https://nightly.link/etcimon/svelte-d/workflows/wasm-opt.yml/master/wasm-opt-darwin-arm64.zip'
+    )
+    expect(forkedWasmOptDownloadUrls('darwin-arm64')).toEqual(
+      expect.arrayContaining(forkedWasmOptArtifactUrls('darwin-arm64'))
+    )
     expect(DEFAULT_WASM_OPT_RELEASE).toBe('wasm-opt-svelte-d')
     expect(isForkedWasmOpt('/tmp/binaryen-build/linux-x86_64/wasm-opt')).toBe(true)
+    expect(isForkedWasmOpt('/tmp/binaryen-build/darwin-arm64/wasm-opt')).toBe(true)
     const root = findBinaryenBuildRoot()
     if (root) expect(root.replace(/\\/g, '/')).toMatch(/binaryen-build$/)
   })

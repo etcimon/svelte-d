@@ -5,6 +5,7 @@
 // wasm-eh cell. Wasm vs host stay different targets (no shared objects /
 // DFLAGS); they share this compiler. Does not start a second HTTP stack.
 import {
+  chmodSync,
   copyFileSync,
   existsSync,
   mkdirSync,
@@ -431,7 +432,20 @@ export function forkedWasmOptDownloadUrl(
   return `https://github.com/${repo}/releases/download/${tag}/wasm-opt-${variant}.tar.gz`
 }
 
-/** Release first, then the wasm-opt-binaries branch (raw + git raw). */
+/** Public zip of the latest successful `wasm-opt` workflow artifact. */
+export function forkedWasmOptArtifactUrls(
+  variant = binaryenBuildVariant(),
+  repo = DEFAULT_WASM_OPT_REPO,
+  branch = 'master'
+): string[] {
+  const art = `wasm-opt-${variant}`
+  return [
+    `https://nightly.link/${repo}/workflows/wasm-opt.yml/${branch}/${art}.zip`,
+    `https://nightly.link/${repo}/workflows/wasm-opt/${branch}/${art}.zip`,
+  ]
+}
+
+/** Release, wasm-opt-binaries branch, then CI artifacts (nightly.link). */
 export function forkedWasmOptDownloadUrls(
   variant = binaryenBuildVariant(),
   repo = DEFAULT_WASM_OPT_REPO,
@@ -442,6 +456,7 @@ export function forkedWasmOptDownloadUrls(
     forkedWasmOptDownloadUrl(variant, repo, tag),
     `https://github.com/${repo}/raw/${branch}/wasm-opt-${variant}.tar.gz`,
     `https://raw.githubusercontent.com/${repo}/${branch}/wasm-opt-${variant}.tar.gz`,
+    ...forkedWasmOptArtifactUrls(variant, repo),
   ]
 }
 
@@ -715,10 +730,93 @@ function ensureBinaryenBuildRoot(start?: string): string {
   return dest
 }
 
+function extractArchive(archive: string, destDir: string): void {
+  mkdirSync(destDir, { recursive: true })
+  const r = spawnSync('tar', ['-xf', archive, '-C', destDir], {
+    stdio: 'inherit',
+    shell: false,
+  })
+  if ((r.status ?? 1) === 0) return
+  const z7 = find7z()
+  if (!z7) throw new Error('tar/7z extract failed for ' + archive)
+  const z = spawnSync(z7, ['x', '-y', `-o${destDir}`, archive], {
+    stdio: 'inherit',
+    shell: false,
+  })
+  if ((z.status ?? 1) !== 0) throw new Error('7z extract failed for ' + archive)
+}
+
+function findNamedFile(root: string, want: string, depth = 4): string {
+  if (depth < 0 || !existsSync(root)) return ''
+  let names: string[] = []
+  try {
+    names = readdirSync(root)
+  } catch {
+    return ''
+  }
+  for (const n of names) {
+    const p = join(root, n)
+    let st
+    try {
+      st = statSync(p)
+    } catch {
+      continue
+    }
+    if (st.isFile() && n === want) return p
+    if (st.isDirectory()) {
+      const hit = findNamedFile(p, want, depth - 1)
+      if (hit) return hit
+    }
+  }
+  return ''
+}
+
+function unwrapWasmOptArchive(destDir: string, exe: string, destBin: string): string {
+  let found =
+    (existsSync(destBin) ? destBin : '') ||
+    locateBuiltWasmOpt(destDir) ||
+    wasmOptInDir(destDir, exe) ||
+    wasmOptInDir(join(destDir, 'bin'), exe) ||
+    findNamedFile(destDir, exe)
+  if (found && existsSync(found)) return found
+  const inner =
+    findNamedFile(destDir, `wasm-opt-${binaryenBuildVariant()}.tar.gz`) ||
+    findNamedFile(destDir, 'wasm-opt.tar.gz')
+  if (inner) {
+    extractArchive(inner, destDir)
+    found =
+      (existsSync(destBin) ? destBin : '') ||
+      locateBuiltWasmOpt(destDir) ||
+      findNamedFile(destDir, exe)
+  }
+  return found && existsSync(found) ? found : ''
+}
+
+function markWasmOptExecutable(bin: string): void {
+  if (process.platform === 'win32') return
+  try {
+    chmodSync(bin, 0o755)
+  } catch {
+    /* ignore */
+  }
+}
+
+function finishForkedInstall(found: string, destBin: string, buildRoot: string): string {
+  if (found !== destBin) {
+    mkdirSync(dirname(destBin), { recursive: true })
+    copyFileSync(found, destBin)
+    found = destBin
+  }
+  markWasmOptExecutable(found)
+  installForkedWasmOpt(found, buildRoot)
+  return found
+}
+
 /**
  * Download the CI-built etcimon/binaryen `wasm-opt` (Flatten + asyncify
  * try_table) the same way LDC 1.43 is fetched. Unpacks into
  * `binaryen-build/<triple>/` (with LICENSE) and `~/.svelte-d/toolchains/binaryen-svelte-d`.
+ * Apple Silicon uses `darwin-arm64`.
  */
 export async function downloadForkedWasmOpt(
   variant = binaryenBuildVariant()
@@ -754,35 +852,58 @@ export async function downloadForkedWasmOpt(
     }
   }
   if (!archive) throw new Error(`forked wasm-opt download failed: ${lastErr}`)
-  const r = spawnSync('tar', ['-xzf', archive, '-C', destDir], {
-    stdio: 'inherit',
-    shell: false,
-  })
-  if ((r.status ?? 1) !== 0) {
-    const z7 = find7z()
-    if (!z7) throw new Error('tar/7z extract failed for ' + archive)
-    const z = spawnSync(z7, ['x', '-y', `-o${destDir}`, archive], {
+  extractArchive(archive, destDir)
+  const found = unwrapWasmOptArchive(destDir, exe, destBin)
+  if (!found) throw new Error('wasm-opt missing after extract: ' + destDir)
+  return finishForkedInstall(found, destBin, buildRoot)
+}
+
+/** Forked wasm-opt on this host, downloading the matching triple if needed. */
+export async function ensureForkedWasmOpt(
+  variant = binaryenBuildVariant()
+): Promise<string> {
+  const have = findWasmOpt()
+  if (have && isForkedWasmOpt(have)) return have
+  return downloadForkedWasmOpt(variant)
+}
+
+/** Sync form for dest `buildWasm` / pipeline (Apple Silicon → darwin-arm64). */
+export function ensureForkedWasmOptSync(
+  variant = binaryenBuildVariant()
+): string {
+  const have = findWasmOpt()
+  if (have && isForkedWasmOpt(have)) return have
+  const exe = wasmOptExeName()
+  const buildRoot = ensureBinaryenBuildRoot()
+  const destDir = join(buildRoot, variant)
+  const destBin = join(destDir, exe)
+  if (existsSync(destBin) && isWasmOptNew(destBin)) {
+    installForkedWasmOpt(destBin, buildRoot)
+    return destBin
+  }
+  mkdirSync(destDir, { recursive: true })
+  let lastErr = ''
+  for (const url of forkedWasmOptDownloadUrls(variant)) {
+    console.log('svelte-d: downloading', url)
+    const archive = join(tmpdir(), basename(url.split('?')[0] || url) || 'wasm-opt.bin')
+    const curl = spawnSync('curl', ['-fsSL', '--max-time', '30', '-o', archive, url], {
       stdio: 'inherit',
       shell: false,
     })
-    if ((z.status ?? 1) !== 0) throw new Error('7z extract failed for ' + archive)
+    if ((curl.status ?? 1) !== 0 || !existsSync(archive) || statSync(archive).size < 64) {
+      lastErr = `curl ${curl.status ?? 1} ${url}`
+      continue
+    }
+    try {
+      extractArchive(archive, destDir)
+      const found = unwrapWasmOptArchive(destDir, exe, destBin)
+      if (found) return finishForkedInstall(found, destBin, buildRoot)
+      lastErr = 'no wasm-opt in ' + archive
+    } catch (e) {
+      lastErr = e instanceof Error ? e.message : String(e)
+    }
   }
-  let found = destBin
-  if (!existsSync(found)) {
-    found =
-      locateBuiltWasmOpt(destDir) ||
-      wasmOptInDir(destDir, exe) ||
-      wasmOptInDir(join(destDir, 'bin'), exe)
-  }
-  if (!found || !existsSync(found))
-    throw new Error('wasm-opt missing after extract: ' + destDir)
-  if (found !== destBin) {
-    mkdirSync(dirname(destBin), { recursive: true })
-    copyFileSync(found, destBin)
-    found = destBin
-  }
-  installForkedWasmOpt(found, buildRoot)
-  return found
+  throw new Error(`forked wasm-opt download failed: ${lastErr}`)
 }
 
 function installForkedWasmOpt(bin: string, buildRoot: string): void {

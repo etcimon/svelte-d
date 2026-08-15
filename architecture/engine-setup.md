@@ -44,7 +44,9 @@ Windows extract of the official `.7z` needs 7-Zip. Unix uses `tar -xJf`.
 
 ## Loci
 
-`packages/svelte-d/ts/platform.ts` — triple, find, download LDC + Binaryen, `buildWasmOptFromSource`, `optimizeWasm`  
+`packages/svelte-d/ts/platform.ts` — triple, find, download LDC + forked `wasm-opt` (`darwin-arm64` on Apple Silicon) from the rolling Release, `wasm-opt-binaries` branch, or CI artifacts (`nightly.link`); `buildWasm` / `bunx svelte-d wasm` call `ensureForkedWasmOpt` before the dest engine post-link  
+`packages/svelte-d/ts/native.ts` — dest `buildWasm` pins `SVELTE_D_WASM_OPT` to that fork  
+
 `binaryen/` — submodule `https://github.com/etcimon/binaryen` branch `svelte-d`  
 `scripts/setup-platform.ts` — `bun run setup` / `bunx svelte-d setup`  
 `packages/svelte-d/source/svelte_d/workspace/ldc.d` — D `findLdc`  

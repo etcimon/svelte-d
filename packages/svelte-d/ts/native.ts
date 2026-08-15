@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dlopen, FFIType, suffix } from 'bun:ffi'
 import { kitProjectDir, nativeExe, nativeLib, workspaceDir } from './paths.ts'
+import { ensureForkedWasmOptSync } from './platform.ts'
 
 export type Via = 'ffi' | 'exe' | 'auto'
 
@@ -111,10 +112,23 @@ export function compileWorkspace(
   return runExe(args)
 }
 
+function pinForkedWasmOpt(): void {
+  try {
+    const bin = ensureForkedWasmOptSync()
+    if (bin) process.env.SVELTE_D_WASM_OPT = bin
+  } catch (e) {
+    console.warn(
+      'svelte-d: forked wasm-opt download skipped —',
+      e instanceof Error ? e.message : e
+    )
+  }
+}
+
 export function buildWasm(
   ws?: string,
   opts: { probes?: boolean; force?: boolean; mode?: 'debug' | 'release' } = {}
 ): RunResult {
+  pinForkedWasmOpt()
   const dest = ws ?? workspaceDir()
   const args = ['wasm', '--ws', dest]
   if (opts.probes) args.push('--probes')
