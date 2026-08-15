@@ -1,0 +1,225 @@
+// Copyright (c) 2026 Etienne Cimon
+// SPDX-License-Identifier: MIT
+module app;
+
+import std.stdio;
+import std.getopt;
+import std.file : exists, getcwd;
+import std.path : buildPath, extension;
+import svelte_d.workspace.drop;
+import svelte_d.parse.svelte;
+import svelte_d.parse.dlang;
+import svelte_d.parse.kit_fs;
+import svelte_d.compile;
+import svelte_d.fallthrough;
+import svelte_d.bootstrap;
+import svelte_d.lodash_api;
+import svelte_d.print.kit_router;
+import svelte_d.workspace.wasm_build;
+import svelte_d.workspace.host_build;
+
+void usage()
+{
+	writeln("svelte-d — SvelteKit → libwasm / vibe.0 in svelte-engine-ws");
+	writeln("  kit paths fall through to the same relative structure (src-svelte / src-d / src-ts / webserver)");
+	writeln("  kit features are accommodated in svelte-engine / libwasm / vibe.0; compile integrates the engine");
+	writeln("  svelte-d drop-ws [--dest DIR] [--force]");
+	writeln("  svelte-d parse <file.svelte|+page.server.d>");
+	writeln("  svelte-d scan [--ws DIR]");
+	writeln("  svelte-d compile [--ws DIR] [--project DIR] [--only FILE]");
+	writeln("      drop engine if needed; Pegged + libdparse → ws/.svelte-d/ir ; src-d stays libwasm IR");
+	writeln("      --only FILE  reprint that kit source only (watch / HMR)");
+	writeln("  svelte-d map <src/routes/+page.svelte>");
+	writeln("  svelte-d map --ws DIR     # write ws/.svelte-d/fallthrough.json");
+	writeln("  svelte-d bootstrap [--ws DIR]  # write/print engine-integration contract");
+	writeln("  svelte-d lodash               # list libwasm.lodash methods");
+	writeln("  svelte-d kit-routes [--ws DIR]");
+	writeln("  svelte-d wasm [--ws DIR] [--probes] [--force]  # per-.o src-d + relink; dub fallback");
+	writeln("  svelte-d host [--ws DIR]             # dub build in ws/webserver (vibe.0)");
+	writeln("  svelte-d version");
+}
+
+int main(string[] args)
+{
+	if (args.length < 2)
+	{
+		usage();
+		return 1;
+	}
+	auto cmd = args[1];
+	try
+	{
+		if (cmd == "drop-ws")
+		{
+			string dest;
+			bool force;
+			getopt(args, "dest", &dest, "force", &force);
+			auto root = findRiscvDev();
+			if (dest.length == 0)
+				dest = defaultWorkspaceDir(root);
+			dropWorkspace(dest, templateDir(root), force);
+			writeBootstrapFile(dest, templateDir(root));
+			return 0;
+		}
+		if (cmd == "parse")
+		{
+			if (args.length < 3)
+			{
+				stderr.writeln("parse needs a file");
+				return 1;
+			}
+			auto file = args[2];
+			auto ext = extension(file);
+			if (ext == ".svelte")
+			{
+				auto t = parseSvelteFile(file);
+				if (!t.successful)
+				{
+					stderr.writeln("scan failed: ", file, " ", t.fail);
+					dumpTree(t);
+					return 1;
+				}
+				if (!scriptsOk(t))
+				{
+					stderr.writeln("FAIL: scripts must be lang=d (libwasm) and/or lang=ts (src-ts/modules)  ", file);
+					return 1;
+				}
+				if (t.peggedOk)
+					writeln("Pegged OK  ", file, " ParseTree=", t.peggedName);
+				else
+					writeln("Pegged FAIL  ", file, " ", t.peggedFail, " (scan still ok)");
+				dumpTree(t);
+				{
+					import svelte_d.parse.markup : parseMarkupEx;
+					auto mp = parseMarkupEx(t.markup);
+					writeln("markup-parse=", mp.kind, " reason=", mp.reason);
+				}
+				if (args.length > 3 && args[3] == "--dump-peg")
+				{
+					import svelte_d.grammar.sveltekit : SvelteKit;
+					auto m = SvelteKit.MarkupDoc(t.markup);
+					writeln("MarkupDoc successful=", m.successful, " children=", m.children.length);
+					writeln(m.toString());
+				}
+				return 0;
+			}
+			if (ext == ".d")
+			{
+				import std.file : readText;
+
+				dumpDOk(readText(file), file);
+				return 0;
+			}
+			stderr.writeln("unknown extension ", ext);
+			return 1;
+		}
+		if (cmd == "scan")
+		{
+			string ws;
+			getopt(args, "ws", &ws);
+			auto root = findRiscvDev();
+			if (ws.length == 0)
+				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			auto src = buildPath(ws, "src-svelte");
+			foreach (k; walkKit(src))
+				writeln(k.kind, "\t", k.path);
+			return 0;
+		}
+		if (cmd == "compile")
+		{
+			string ws;
+			string project;
+			string[] only;
+			getopt(args, "ws", &ws, "project", &project, "only", &only);
+			auto root = findRiscvDev();
+			if (ws.length == 0)
+				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			return compileWorkspace(ws, project, only);
+		}
+		if (cmd == "map")
+		{
+			string ws;
+			getopt(args, "ws", &ws);
+			if (ws.length)
+			{
+				writeFallthroughFile(ws);
+				writeln("fallthrough ", buildPath(ws, ".svelte-d", "fallthrough.json"));
+				return 0;
+			}
+			if (args.length < 3)
+			{
+				stderr.writeln("map needs a kit path or --ws DIR");
+				return 1;
+			}
+			writeln(mapKitRel(args[2]).toJson());
+			return 0;
+		}
+		if (cmd == "bootstrap")
+		{
+			string ws;
+			getopt(args, "ws", &ws);
+			auto root = findRiscvDev();
+			if (ws.length == 0)
+				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			writeBootstrapFile(ws, templateDir(root));
+			writeln(bootstrapDocument(ws, templateDir(root)));
+			return verifyBootstrap(ws);
+		}
+		if (cmd == "kit-routes")
+		{
+			string ws;
+			getopt(args, "ws", &ws);
+			auto root = findRiscvDev();
+			if (ws.length == 0)
+				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			foreach (r; collectKitRoutes(buildPath(ws, "src-svelte")))
+				writeln(r.pattern, "\t", r.kitRel, "\t", r.srcD);
+			return 0;
+		}
+		if (cmd == "lodash")
+		{
+			auto cat = loadLodashCatalog();
+			writeln("libwasm.lodash ", lodashSourcePath(), " methods=", cat.length);
+			foreach (m; cat)
+				writeln(m);
+			return 0;
+		}
+		if (cmd == "wasm")
+		{
+			string ws;
+			bool probes;
+			bool force;
+			getopt(args, "ws", &ws, "probes", &probes, "force", &force);
+			auto root = findRiscvDev();
+			if (ws.length == 0)
+				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			auto st = buildWasmCell(ws, "application", force);
+			if (st != 0)
+				return st;
+			if (probes)
+				return runWasmProbes(ws);
+			return 0;
+		}
+		if (cmd == "host")
+		{
+			string ws;
+			getopt(args, "ws", &ws);
+			auto root = findRiscvDev();
+			if (ws.length == 0)
+				ws = exists(defaultWorkspaceDir(root)) ? defaultWorkspaceDir(root) : templateDir(root);
+			return buildHostCell(ws);
+		}
+		if (cmd == "version")
+		{
+			writeln("1");
+			return 0;
+		}
+		usage();
+		return 1;
+	}
+	catch (Exception e)
+	{
+		stderr.writeln(e.msg);
+		return 1;
+	}
+}

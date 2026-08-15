@@ -1,0 +1,15 @@
+name "svelte-engine-server"
+description "svelte-engine host (vibe.0). Uses riscv-dev add-local packages."
+copyright "Copyright © 2023-2026, GlobecSys Inc"
+authors "Etienne"
+dependency "vibe-0" version="~>1.2.0"
+dependency "memutils" version="~>1.0.0"
+dependency "botan" version="~>1.13.0"
+# dmaxminddb 0.1.2 does not compile on LDC 1.42 (missing bigEndianToNative).
+# geoip.d is a stub until that package is updated.
+targetType "executable"
+targetName "svelte-engine-server"
+targetPath "."
+sourcePaths "source"
+excludedSourceFiles "source/comfyapi.d"
+versions "VibeCustomMain" "DisableDebugger" "VibeNoDebug" "SQLite" "TLSGC" "VibeRequestDebugger" "VibeDebugCatchAll" "DeimosOpenSSL_3_0"

@@ -1,0 +1,1559 @@
+{
+    "522": {
+      "inputs": {
+        "image_path": "F:\\Development\\ComfyUI\\output\\./3DAI\\User1\\ArtStation\\A_Vertical_640_LastFrames\\LastFrame_01.jpg",
+        "RGBA": "false",
+        "filename_text_extension": "true"
+      },
+      "class_type": "Image Load",
+      "_meta": {
+        "title": "Arg: Image Load (Prev Frame)"
+      }
+    },
+    "523": {
+      "inputs": {
+        "image_path": "F:\\Development\\ComfyUI\\input\\yare-yue-2.jpg",
+        "RGBA": "false",
+        "filename_text_extension": "true"
+      },
+      "class_type": "Image Load",
+      "_meta": {
+        "title": "Arg: Image Load (Next Frame)"
+      }
+    },
+    "368": {
+      "inputs": {
+        "value": 400
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "Arg: Int (Video Height)"
+      }
+    },
+    "369": {
+      "inputs": {
+        "value": 640
+      },
+      "class_type": "easy int",
+      "_meta": {
+        "title": "Arg: Int (Video Width)"
+      }
+    },
+    "265": {
+      "inputs": {
+        "value": "F:\\Development\\ComfyUI\\input\\Transitions\\"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: String (Transition Path)"
+      }
+    },
+    "382": {
+      "inputs": {
+        "value": false
+      },
+      "class_type": "easy boolean",
+      "_meta": {
+        "title": "Arg: Boolean (Finalize Video)"
+      }
+    },
+    "390": {
+      "inputs": {
+        "value": "ArtStation"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: String (Project Name)"
+      }
+    },
+    "391": {
+      "inputs": {
+        "value": "User1"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: String (User ID)"
+      }
+    },
+    "401": {
+      "inputs": {
+        "value": "A"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: Previous Image ID"
+      }
+    },
+    "402": {
+      "inputs": {
+        "value": "B"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: Next Image ID"
+      }
+    },
+    "404": {
+      "inputs": {
+        "value": true
+      },
+      "class_type": "easy boolean",
+      "_meta": {
+        "title": "Arg: Boolean (Select Random Transition)"
+      }
+    },
+    "422": {
+      "inputs": {
+        "value": "Vertical"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: Previous Motion Preset"
+      }
+    },
+    "423": {
+      "inputs": {
+        "value": "Dolly"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: Next Motion Preset"
+      }
+    },
+    "485": {
+      "inputs": {
+        "value": "F:\\Development\\ComfyUI\\output"
+      },
+      "class_type": "easy string",
+      "_meta": {
+        "title": "Arg: String (Output Path)"
+      }
+    },
+    "515": {
+      "inputs": {
+        "value": 1
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "Arg: Int (PrevImg Numframes)"
+      }
+    },
+    "516": {
+      "inputs": {
+        "value": 600
+      },
+      "class_type": "INTConstant",
+      "_meta": {
+        "title": "Arg: Int (NextImg Numframes)"
+      }
+    },
+    "171": {
+      "inputs": {
+        "depth_pro_model": [
+          "203",
+          0
+        ],
+        "image": [
+          "366",
+          0
+        ]
+      },
+      "class_type": "DepthPro",
+      "_meta": {
+        "title": "Depth Pro"
+      }
+    },
+    "172": {
+      "inputs": {
+        "depth": [
+          "171",
+          0
+        ]
+      },
+      "class_type": "MetricDepthToInverse",
+      "_meta": {
+        "title": "Metric Depth to Inverse"
+      }
+    },
+    "184": {
+      "inputs": {
+        "strength": 0.25,
+        "feature_threshold": 0,
+        "feature_param": "intensity",
+        "feature_mode": "relative",
+        "intensity": 0.89,
+        "reverse": true,
+        "smooth": true,
+        "phase": 0,
+        "loop": true
+      },
+      "class_type": "DepthflowMotionPresetZoom",
+      "_meta": {
+        "title": "🌊 Depthflow Motion Preset Zoom"
+      }
+    },
+    "185": {
+      "inputs": {
+        "strength": 1,
+        "feature_threshold": 0,
+        "feature_param": "intensity",
+        "feature_mode": "relative",
+        "intensity": 1.4000000000000001,
+        "reverse": true,
+        "smooth": true,
+        "loop": true,
+        "depth": 0.25
+      },
+      "class_type": "DepthflowMotionPresetDolly",
+      "_meta": {
+        "title": "🌊 Depthflow Motion Preset Dolly"
+      }
+    },
+    "186": {
+      "inputs": {
+        "strength": 0.25,
+        "feature_threshold": 0,
+        "feature_param": "intensity",
+        "feature_mode": "relative",
+        "intensity": 2,
+        "reverse": false,
+        "smooth": true,
+        "phase_x": 0,
+        "phase_y": 0,
+        "phase_z": 0,
+        "amplitude_x": 1,
+        "amplitude_y": 1,
+        "amplitude_z": 0,
+        "static_value": 0.3
+      },
+      "class_type": "DepthflowMotionPresetCircle",
+      "_meta": {
+        "title": "🌊 Depthflow Motion Preset Circle"
+      }
+    },
+    "187": {
+      "inputs": {
+        "strength": 0.8200000000000001,
+        "feature_threshold": 0,
+        "feature_param": "depth",
+        "feature_mode": "relative",
+        "intensity": 0.9500000000000001,
+        "reverse": true,
+        "depth": 0.75
+      },
+      "class_type": "DepthflowMotionPresetOrbital",
+      "_meta": {
+        "title": "🌊 Depthflow Motion Preset Orbital"
+      }
+    },
+    "188": {
+      "inputs": {
+        "strength": 1.25,
+        "feature_threshold": 0,
+        "feature_param": "intensity",
+        "feature_mode": "relative",
+        "intensity": 1.3,
+        "reverse": true,
+        "loop": true,
+        "smooth": true,
+        "phase": 0,
+        "steady_value": 0.3
+      },
+      "class_type": "DepthflowMotionPresetVertical",
+      "_meta": {
+        "title": "🌊 Depthflow Motion Preset Vertical"
+      }
+    },
+    "189": {
+      "inputs": {
+        "strength": 1.25,
+        "feature_threshold": 0,
+        "feature_param": "intensity",
+        "feature_mode": "relative",
+        "intensity": 1.5,
+        "reverse": true,
+        "loop": true,
+        "smooth": true,
+        "phase": 0,
+        "steady_value": 0.3
+      },
+      "class_type": "DepthflowMotionPresetHorizontal",
+      "_meta": {
+        "title": "🌊 Depthflow Motion Preset Horizontal"
+      }
+    },
+    "190": {
+      "inputs": {
+        "animation_speed": 2.3000000000000003,
+        "input_fps": 30,
+        "output_fps": 30,
+        "num_frames": [
+          "516",
+          0
+        ],
+        "quality": 80,
+        "ssaa": 1.2000000000000002,
+        "invert": 0,
+        "tiling_mode": "repeat",
+        "image": [
+          "367",
+          0
+        ],
+        "depth_map": [
+          "336",
+          0
+        ],
+        "motion": [
+          "185",
+          0
+        ]
+      },
+      "class_type": "Depthflow",
+      "_meta": {
+        "title": "🌊 Depthflow"
+      }
+    },
+    "203": {
+      "inputs": {
+        "precision": "fp32"
+      },
+      "class_type": "LoadDepthPro",
+      "_meta": {
+        "title": "(Down)Load Depth Pro model"
+      }
+    },
+    "237": {
+      "inputs": {
+        "channel": "red",
+        "image": [
+          "311",
+          0
+        ]
+      },
+      "class_type": "ImageToMask",
+      "_meta": {
+        "title": "Convert Image to Mask"
+      }
+    },
+    "239": {
+      "inputs": {
+        "image": [
+          "360",
+          0
+        ],
+        "alpha": [
+          "377",
+          3
+        ]
+      },
+      "class_type": "JoinImageWithAlpha",
+      "_meta": {
+        "title": "Join Image with Alpha"
+      }
+    },
+    "242": {
+      "inputs": {
+        "width": [
+          "311",
+          1
+        ],
+        "height": [
+          "311",
+          2
+        ],
+        "X": 0,
+        "Y": 0,
+        "rotation": 0,
+        "feathering": 0,
+        "image": [
+          "239",
+          0
+        ],
+        "image_overlay": [
+          "501",
+          0
+        ]
+      },
+      "class_type": "Image Transpose",
+      "_meta": {
+        "title": "Image Transpose"
+      }
+    },
+    "263": {
+      "inputs": {
+        "directory": [
+          "465",
+          6
+        ],
+        "image_load_cap": [
+          "264",
+          0
+        ],
+        "start_index": 0,
+        "load_always": true
+      },
+      "class_type": "LoadImagesFromDir //Inspire",
+      "_meta": {
+        "title": "Load Image Batch From Dir (Inspire)"
+      }
+    },
+    "264": {
+      "inputs": {
+        "directory": [
+          "465",
+          6
+        ],
+        "start_index": 0,
+        "limit": -1
+      },
+      "class_type": "easy imagesCountInDirectory",
+      "_meta": {
+        "title": "imagesCountInDirectory"
+      }
+    },
+    "274": {
+      "inputs": {
+        "image": [
+          "263",
+          0
+        ]
+      },
+      "class_type": "ImpactImageBatchToImageList",
+      "_meta": {
+        "title": "Image Batch to Image List"
+      }
+    },
+    "278": {
+      "inputs": {
+        "mask": [
+          "237",
+          0
+        ]
+      },
+      "class_type": "InvertMask",
+      "_meta": {
+        "title": "InvertMask"
+      }
+    },
+    "282": {
+      "inputs": {
+        "image": [
+          "242",
+          0
+        ]
+      },
+      "class_type": "ImageListToBatch+",
+      "_meta": {
+        "title": "🔧 Image List To Batch"
+      }
+    },
+    "311": {
+      "inputs": {
+        "width": [
+          "369",
+          0
+        ],
+        "height": [
+          "368",
+          0
+        ],
+        "upscale_method": "lanczos",
+        "keep_proportion": false,
+        "divisible_by": 2,
+        "crop": "disabled",
+        "image": [
+          "274",
+          0
+        ]
+      },
+      "class_type": "ImageResizeKJ",
+      "_meta": {
+        "title": "Resize Image"
+      }
+    },
+    "312": {
+      "inputs": {
+        "images": [
+          "311",
+          0
+        ]
+      },
+      "class_type": "PreviewImage",
+      "_meta": {
+        "title": "Preview Image"
+      }
+    },
+    "317": {
+      "inputs": {
+        "upscale_model": "1x-ITF-SkinDiffDetail-Lite-v1.pth",
+        "mode": "resize",
+        "rescale_factor": 4,
+        "resize_width": [
+          "369",
+          0
+        ],
+        "resampling_method": "lanczos",
+        "supersample": "true",
+        "rounding_modulus": 8,
+        "image": [
+          "522",
+          0
+        ]
+      },
+      "class_type": "CR Upscale Image",
+      "_meta": {
+        "title": "🔍 CR Upscale Image"
+      }
+    },
+    "332": {
+      "inputs": {
+        "upscale_model": "1x-ITF-SkinDiffDetail-Lite-v1.pth",
+        "mode": "resize",
+        "rescale_factor": 4,
+        "resize_width": [
+          "369",
+          0
+        ],
+        "resampling_method": "lanczos",
+        "supersample": "true",
+        "rounding_modulus": 8,
+        "image": [
+          "523",
+          0
+        ]
+      },
+      "class_type": "CR Upscale Image",
+      "_meta": {
+        "title": "🔍 CR Upscale Image"
+      }
+    },
+    "334": {
+      "inputs": {
+        "depth_pro_model": [
+          "203",
+          0
+        ],
+        "image": [
+          "367",
+          0
+        ]
+      },
+      "class_type": "DepthPro",
+      "_meta": {
+        "title": "Depth Pro"
+      }
+    },
+    "336": {
+      "inputs": {
+        "depth": [
+          "334",
+          0
+        ]
+      },
+      "class_type": "MetricDepthToInverse",
+      "_meta": {
+        "title": "Metric Depth to Inverse"
+      }
+    },
+    "342": {
+      "inputs": {
+        "fps": 30,
+        "name_prefix": [
+          "412",
+          0
+        ],
+        "use_python_ffmpeg": false,
+        "FFMPEG_CONFIG_JSON": [
+          "348",
+          0
+        ],
+        "images": [
+          "383",
+          0
+        ]
+      },
+      "class_type": "Bjornulf_imagesToVideo",
+      "_meta": {
+        "title": "🖼➜📹 images to video (FFMPEG Save Video)"
+      }
+    },
+    "343": {
+      "inputs": {
+        "fps": 30,
+        "name_prefix": [
+          "414",
+          0
+        ],
+        "use_python_ffmpeg": false,
+        "FFMPEG_CONFIG_JSON": [
+          "348",
+          0
+        ],
+        "images": [
+          "190",
+          0
+        ]
+      },
+      "class_type": "Bjornulf_imagesToVideo",
+      "_meta": {
+        "title": "🖼➜📹 images to video (FFMPEG Save Video)"
+      }
+    },
+    "344": {
+      "inputs": {
+        "number_of_videos": 3,
+        "output_filename": [
+          "440",
+          0
+        ],
+        "use_python_ffmpeg": false,
+        "FFMPEG_CONFIG_JSON": [
+          "348",
+          0
+        ],
+        "video_path_1": [
+          "409",
+          0
+        ],
+        "video_path_2": [
+          "345",
+          2
+        ],
+        "video_path_3": [
+          "343",
+          2
+        ]
+      },
+      "class_type": "Bjornulf_ConcatVideos",
+      "_meta": {
+        "title": "📹🔗 Concat Videos (FFmpeg)"
+      }
+    },
+    "345": {
+      "inputs": {
+        "fps": 30,
+        "name_prefix": [
+          "413",
+          0
+        ],
+        "use_python_ffmpeg": false,
+        "FFMPEG_CONFIG_JSON": [
+          "348",
+          0
+        ],
+        "images": [
+          "282",
+          0
+        ]
+      },
+      "class_type": "Bjornulf_imagesToVideo",
+      "_meta": {
+        "title": "🖼➜📹 images to video (FFMPEG Save Video)"
+      }
+    },
+    "348": {
+      "inputs": {
+        "ffmpeg_path": "ffmpeg",
+        "container_format": "mp4",
+        "video_codec": "h264_nvenc (H.264 / NVIDIA GPU)",
+        "preset": "medium",
+        "crf": 18,
+        "pixel_format": "yuv420p",
+        "force_fps": 0,
+        "enabled_change_resolution": true,
+        "width": [
+          "369",
+          0
+        ],
+        "height": [
+          "368",
+          0
+        ],
+        "enable_change_audio": false,
+        "audio_codec": "aac",
+        "enabled_audio_bitrate": false,
+        "audio_bitrate": "192k",
+        "enabled_static_video_bitrate": false,
+        "video_bitrate": "50M",
+        "force_transparency_webm": false
+      },
+      "class_type": "Bjornulf_FFmpegConfig",
+      "_meta": {
+        "title": "⚙📹 FFmpeg Configuration 📹⚙"
+      }
+    },
+    "359": {
+      "inputs": {
+        "image1": [
+          "364",
+          0
+        ]
+      },
+      "class_type": "ImpactMakeImageList",
+      "_meta": {
+        "title": "Make Image List"
+      }
+    },
+    "360": {
+      "inputs": {
+        "image1": [
+          "363",
+          0
+        ]
+      },
+      "class_type": "ImpactMakeImageList",
+      "_meta": {
+        "title": "Make Image List"
+      }
+    },
+    "363": {
+      "inputs": {
+        "size": [
+          "264",
+          0
+        ],
+        "method": "repeat first",
+        "image": [
+          "190",
+          0
+        ]
+      },
+      "class_type": "ImageExpandBatch+",
+      "_meta": {
+        "title": "🔧 Image Expand Batch"
+      }
+    },
+    "364": {
+      "inputs": {
+        "size": [
+          "264",
+          0
+        ],
+        "method": "repeat last",
+        "image": [
+          "383",
+          0
+        ]
+      },
+      "class_type": "ImageExpandBatch+",
+      "_meta": {
+        "title": "🔧 Image Expand Batch"
+      }
+    },
+    "366": {
+      "inputs": {
+        "width": [
+          "369",
+          0
+        ],
+        "height": [
+          "368",
+          0
+        ],
+        "upscale_method": "lanczos",
+        "keep_proportion": false,
+        "divisible_by": 2,
+        "crop": "center",
+        "image": [
+          "317",
+          0
+        ]
+      },
+      "class_type": "ImageResizeKJ",
+      "_meta": {
+        "title": "Resize Image"
+      }
+    },
+    "367": {
+      "inputs": {
+        "width": [
+          "369",
+          0
+        ],
+        "height": [
+          "368",
+          0
+        ],
+        "upscale_method": "lanczos",
+        "keep_proportion": false,
+        "divisible_by": 2,
+        "crop": "center",
+        "image": [
+          "332",
+          0
+        ]
+      },
+      "class_type": "ImageResizeKJ",
+      "_meta": {
+        "title": "Resize Image"
+      }
+    },
+    "374": {
+      "inputs": {
+        "mode": "main_color",
+        "image": [
+          "375",
+          0
+        ]
+      },
+      "class_type": "LayerUtility: GetColorTone",
+      "_meta": {
+        "title": "LayerUtility: GetColorTone(Advance)"
+      }
+    },
+    "375": {
+      "inputs": {
+        "select": 0,
+        "images": [
+          "274",
+          0
+        ]
+      },
+      "class_type": "SelectImageList",
+      "_meta": {
+        "title": "SelectImageList"
+      }
+    },
+    "377": {
+      "inputs": {
+        "raw_code": "print(str(any1))\ncolorTone = str(any1)\ninvertedMask = mask1\nregularMask = mask2\nif colorTone == '#000000':\n  mask1.to(regularMask)\n  mask2.to(invertedMask)\nelse:\n  mask1.to(invertedMask)\n  mask2.to(regularMask)",
+        "number1": 0,
+        "number2": 0,
+        "text1": "hello",
+        "text2": "world",
+        "verbose": true,
+        "9q7adp4": "print(str(any1))\ncolorTone = str(any1)\ninvertedMask = mask1\nregularMask = mask2\nif colorTone == '#000000':\n  mask1.to(regularMask)\n  mask2.to(invertedMask)\nelse:\n  mask1.to(invertedMask)\n  mask2.to(regularMask)",
+        "mask1": [
+          "278",
+          0
+        ],
+        "mask2": [
+          "237",
+          0
+        ],
+        "any1": [
+          "374",
+          0
+        ]
+      },
+      "class_type": "Exec Python Code Script",
+      "_meta": {
+        "title": "Python Interpreter"
+      }
+    },
+    "378": {
+      "inputs": {
+        "size": 1,
+        "method": "repeat last",
+        "image": [
+          "190",
+          0
+        ]
+      },
+      "class_type": "ImageExpandBatch+",
+      "_meta": {
+        "title": "🔧 Image Expand Batch"
+      }
+    },
+    "379": {
+      "inputs": {
+        "output_path": [
+          "461",
+          6
+        ],
+        "filename_prefix": [
+          "461",
+          7
+        ],
+        "filename_delimiter": "_",
+        "filename_number_padding": 2,
+        "filename_number_start": "false",
+        "extension": "png",
+        "dpi": 300,
+        "quality": 80,
+        "optimize_image": "true",
+        "lossless_webp": "false",
+        "overwrite_mode": "prefix_as_filename",
+        "show_history": "false",
+        "show_history_by_prefix": "true",
+        "embed_workflow": "true",
+        "show_previews": "true",
+        "images": [
+          "378",
+          0
+        ]
+      },
+      "class_type": "Image Save",
+      "_meta": {
+        "title": "Image Save (Last Image for Next Transition)"
+      }
+    },
+    "381": {
+      "inputs": {
+        "value": [
+          "518",
+          0
+        ]
+      },
+      "class_type": "easy boolean",
+      "_meta": {
+        "title": "Boolean (Start with Transition)"
+      }
+    },
+    "383": {
+      "inputs": {
+        "animation_speed": 2.3000000000000003,
+        "input_fps": 30,
+        "output_fps": 30,
+        "num_frames": [
+          "515",
+          0
+        ],
+        "quality": 80,
+        "ssaa": 1.2000000000000002,
+        "invert": 0,
+        "tiling_mode": "repeat",
+        "image": [
+          "366",
+          0
+        ],
+        "depth_map": [
+          "172",
+          0
+        ],
+        "motion": [
+          "188",
+          0
+        ]
+      },
+      "class_type": "Depthflow",
+      "_meta": {
+        "title": "🌊 Depthflow"
+      }
+    },
+    "392": {
+      "inputs": {
+        "project_root_name": "3DAI",
+        "output_path_generation": "relative"
+      },
+      "class_type": "Create Project Root",
+      "_meta": {
+        "title": "Create Project Root"
+      }
+    },
+    "393": {
+      "inputs": {
+        "folder_name": [
+          "391",
+          0
+        ],
+        "path": [
+          "392",
+          0
+        ]
+      },
+      "class_type": "Add Folder",
+      "_meta": {
+        "title": "Add Folder (User ID)"
+      }
+    },
+    "394": {
+      "inputs": {
+        "folder_name": [
+          "390",
+          0
+        ],
+        "path": [
+          "393",
+          0
+        ]
+      },
+      "class_type": "Add Folder",
+      "_meta": {
+        "title": "Add Folder (Project Name)"
+      }
+    },
+    "395": {
+      "inputs": {
+        "text": "./3DAI\\User1\\ArtStation",
+        "path": [
+          "394",
+          0
+        ]
+      },
+      "class_type": "Show Path",
+      "_meta": {
+        "title": "Project Directory Path"
+      }
+    },
+    "396": {
+      "inputs": {
+        "folder_name": [
+          "403",
+          0
+        ],
+        "path": [
+          "394",
+          0
+        ]
+      },
+      "class_type": "Add Folder",
+      "_meta": {
+        "title": "Add Folder (Nth Transition)"
+      }
+    },
+    "398": {
+      "inputs": {
+        "text": "./3DAI\\User1\\ArtStation\\AB",
+        "path": [
+          "396",
+          0
+        ]
+      },
+      "class_type": "Show Path",
+      "_meta": {
+        "title": "Transition Path"
+      }
+    },
+    "403": {
+      "inputs": {
+        "string_a": [
+          "401",
+          0
+        ],
+        "string_b": [
+          "402",
+          0
+        ]
+      },
+      "class_type": "ConcatStringSingle",
+      "_meta": {
+        "title": "Concat String (Transition Name)"
+      }
+    },
+    "409": {
+      "inputs": {
+        "select": 1,
+        "sel_mode": true,
+        "input": [
+          "342",
+          2
+        ]
+      },
+      "class_type": "ImpactInversedSwitch",
+      "_meta": {
+        "title": "Inversed Switch (Any)"
+      }
+    },
+    "412": {
+      "inputs": {
+        "file_name_prefix": [
+          "421",
+          0
+        ],
+        "add_date_time": "disable",
+        "date_time_format": "%Y_%m_%d_%H:%M:%S",
+        "path": [
+          "462",
+          6
+        ]
+      },
+      "class_type": "Add File Name Prefix Advanced",
+      "_meta": {
+        "title": "Add File Name Prefix Advanced"
+      }
+    },
+    "413": {
+      "inputs": {
+        "file_name_prefix": [
+          "424",
+          0
+        ],
+        "add_date_time": "disable",
+        "date_time_format": "%Y_%m_%d_%H:%M:%S",
+        "path": [
+          "462",
+          6
+        ]
+      },
+      "class_type": "Add File Name Prefix Advanced",
+      "_meta": {
+        "title": "Add File Name Prefix Advanced"
+      }
+    },
+    "414": {
+      "inputs": {
+        "file_name_prefix": [
+          "426",
+          0
+        ],
+        "add_date_time": "disable",
+        "date_time_format": "%Y_%m_%d_%H:%M:%S",
+        "path": [
+          "462",
+          6
+        ]
+      },
+      "class_type": "Add File Name Prefix Advanced",
+      "_meta": {
+        "title": "Add File Name Prefix Advanced"
+      }
+    },
+    "415": {
+      "inputs": {
+        "folder_name": "ffmpeg",
+        "path": [
+          "394",
+          0
+        ]
+      },
+      "class_type": "Add Folder",
+      "_meta": {
+        "title": "Add Folder (Project Name/[str])"
+      }
+    },
+    "421": {
+      "inputs": {
+        "text1": [
+          "401",
+          0
+        ],
+        "text2": [
+          "422",
+          0
+        ],
+        "text3": [
+          "445",
+          0
+        ],
+        "delimiter": "_"
+      },
+      "class_type": "ttN concat",
+      "_meta": {
+        "title": "Concat String ([Previous ID]_[Prev Motion]_[Width])"
+      }
+    },
+    "424": {
+      "inputs": {
+        "text1": [
+          "462",
+          7
+        ],
+        "text2": [
+          "465",
+          7
+        ],
+        "text3": [
+          "445",
+          0
+        ],
+        "delimiter": "_"
+      },
+      "class_type": "ttN concat",
+      "_meta": {
+        "title": "Concat String ([Transition Name]_[Transition ID]_[Width])"
+      }
+    },
+    "426": {
+      "inputs": {
+        "text1": [
+          "402",
+          0
+        ],
+        "text2": [
+          "423",
+          0
+        ],
+        "text3": [
+          "445",
+          0
+        ],
+        "delimiter": "_"
+      },
+      "class_type": "ttN concat",
+      "_meta": {
+        "title": "Concat String ([Next ID]_[Next Motion]_[Width])"
+      }
+    },
+    "437": {
+      "inputs": {
+        "text1": [
+          "391",
+          0
+        ],
+        "text2": [
+          "390",
+          0
+        ],
+        "text3": [
+          "444",
+          0
+        ],
+        "delimiter": "_"
+      },
+      "class_type": "ttN concat",
+      "_meta": {
+        "title": "Concat String ([UserID]_[Project Name]_[Width])"
+      }
+    },
+    "440": {
+      "inputs": {
+        "text1": [
+          "437",
+          0
+        ],
+        "text2": [
+          "462",
+          7
+        ],
+        "text3": [
+          "463",
+          0
+        ],
+        "delimiter": "_"
+      },
+      "class_type": "ttN concat",
+      "_meta": {
+        "title": "Concat String ([..]_[Transition Name]_[#vids])"
+      }
+    },
+    "444": {
+      "inputs": {
+        "prefix": "",
+        "suffix": "",
+        "input": [
+          "369",
+          0
+        ]
+      },
+      "class_type": "SomethingToString",
+      "_meta": {
+        "title": "Video Width"
+      }
+    },
+    "445": {
+      "inputs": {
+        "prefix": "",
+        "suffix": "",
+        "input": [
+          "369",
+          0
+        ]
+      },
+      "class_type": "SomethingToString",
+      "_meta": {
+        "title": "Video Width"
+      }
+    },
+    "456": {
+      "inputs": {
+        "text": "./3DAI\\User1\\ArtStation\\ffmpeg",
+        "path": [
+          "415",
+          0
+        ]
+      },
+      "class_type": "Show Path",
+      "_meta": {
+        "title": "Show Path"
+      }
+    },
+    "457": {
+      "inputs": {
+        "text": "./3DAI\\User1\\ArtStation\\ffmpeg",
+        "path": [
+          "462",
+          6
+        ]
+      },
+      "class_type": "Show Path",
+      "_meta": {
+        "title": "Show Path"
+      }
+    },
+    "458": {
+      "inputs": {
+        "text": "AB",
+        "path": [
+          "462",
+          7
+        ]
+      },
+      "class_type": "Show Path",
+      "_meta": {
+        "title": "Show Path"
+      }
+    },
+    "460": {
+      "inputs": {
+        "STRING": [
+          "461",
+          6
+        ]
+      },
+      "class_type": "Bjornulf_ShowStringText",
+      "_meta": {
+        "title": "👁 Show String (Last Frame Storage Path)"
+      }
+    },
+    "461": {
+      "inputs": {
+        "raw_code": "print(any1)\nprojectPath = any1\nprevFrameID = text2\nnextFrameID = text1\nprevMotionPreset = any2\nnextMotionPreset = any3\noutputPath = any4\nvideoWidth = str(number2)\nprevLastFramesFolder = prevFrameID + '_'+str(prevMotionPreset)+'_'+videoWidth+'_LastFrames'\nnextLastFramesFolder = nextFrameID + '_'+str(nextMotionPreset)+'_'+videoWidth+'_LastFrames'\n# Set Next Last Frame's FileName\ntext2.to(nextFrameID + '_' + str(nextMotionPreset) + '_LastFrame')\n# Set Next Last Frame's Save Path\ntext1.to(str(projectPath) + '\\\\' + nextLastFramesFolder)\n# Load Previous Last Frame's Save Path (for when starting with transition)\nany1.to(outputPath + '\\\\' + str(projectPath) + '\\\\' + prevLastFramesFolder)",
+        "number1": 0,
+        "number2": [
+          "369",
+          0
+        ],
+        "text1": [
+          "402",
+          0
+        ],
+        "text2": [
+          "401",
+          0
+        ],
+        "verbose": true,
+        "g17f5tb": "print(any1)\nprojectPath = any1\nprevFrameID = text2\nnextFrameID = text1\nprevMotionPreset = any2\nnextMotionPreset = any3\noutputPath = any4\nvideoWidth = str(number2)\nprevLastFramesFolder = prevFrameID + '_'+str(prevMotionPreset)+'_'+videoWidth+'_LastFrames'\nnextLastFramesFolder = nextFrameID + '_'+str(nextMotionPreset)+'_'+videoWidth+'_LastFrames'\n# Set Next Last Frame's FileName\ntext2.to(nextFrameID + '_' + str(nextMotionPreset) + '_LastFrame')\n# Set Next Last Frame's Save Path\ntext1.to(str(projectPath) + '\\\\' + nextLastFramesFolder)\n# Load Previous Last Frame's Save Path (for when starting with transition)\nany1.to(outputPath + '\\\\' + str(projectPath) + '\\\\' + prevLastFramesFolder)",
+        "list1": [
+          "369",
+          0
+        ],
+        "any1": [
+          "394",
+          0
+        ],
+        "any2": [
+          "422",
+          0
+        ],
+        "any3": [
+          "423",
+          0
+        ],
+        "any4": [
+          "485",
+          0
+        ]
+      },
+      "class_type": "Exec Python Code Script",
+      "_meta": {
+        "title": "Python Interpreter"
+      }
+    },
+    "462": {
+      "inputs": {
+        "raw_code": "import os\n\nstartWithTransition = bool(any1)\nprojectFFMPEGpath = str(any2)\ntransitionName =  str(any3)\n\n\n# Count videos to concat\nif startWithTransition:\n  number1.to(2) # Concatenate 2 vids\nelse:\n  number1.to(3) #Concatenate 3 vids\ntext1.to(projectFFMPEGpath)\ntext2.to(transitionName)",
+        "number1": 0,
+        "number2": 0,
+        "verbose": true,
+        "6iahdbj": "import os\n\nstartWithTransition = bool(any1)\nprojectFFMPEGpath = str(any2)\ntransitionName =  str(any3)\n\n\n# Count videos to concat\nif startWithTransition:\n  number1.to(2) # Concatenate 2 vids\nelse:\n  number1.to(3) #Concatenate 3 vids\ntext1.to(projectFFMPEGpath)\ntext2.to(transitionName)",
+        "any1": [
+          "381",
+          0
+        ],
+        "any2": [
+          "415",
+          0
+        ],
+        "any3": [
+          "403",
+          0
+        ]
+      },
+      "class_type": "Exec Python Code Script",
+      "_meta": {
+        "title": "Python Interpreter"
+      }
+    },
+    "463": {
+      "inputs": {
+        "prefix": "",
+        "suffix": "",
+        "input": [
+          "462",
+          4
+        ]
+      },
+      "class_type": "SomethingToString",
+      "_meta": {
+        "title": "# Vids"
+      }
+    },
+    "465": {
+      "inputs": {
+        "raw_code": "from random import randrange\nrnd = randrange(1,36) # Random Transition ID\ntransitionsDir = text1\n\n\nif (bool(any1)): # is random transition\n  text1.to(transitionsDir + str(rnd))\n  text2.to(str(rnd)) # Chosen Transition ID\nelse:\n  text2.to(str(os.path.basename(os.path.normpath(text1))))\n  text1.to(transitionsDir) # Transition ID is already in path\nprint(text1)\nprint(text2)",
+        "number1": 0,
+        "number2": 0,
+        "text1": [
+          "265",
+          0
+        ],
+        "verbose": true,
+        "5tsduc9": "from random import randrange\nrnd = randrange(1,36) # Random Transition ID\ntransitionsDir = text1\n\n\nif (bool(any1)): # is random transition\n  text1.to(transitionsDir + str(rnd))\n  text2.to(str(rnd)) # Chosen Transition ID\nelse:\n  text2.to(str(os.path.basename(os.path.normpath(text1))))\n  text1.to(transitionsDir) # Transition ID is already in path\nprint(text1)\nprint(text2)",
+        "any1": [
+          "404",
+          0
+        ]
+      },
+      "class_type": "Exec Python Code Script",
+      "_meta": {
+        "title": "Python Interpreter"
+      }
+    },
+    "466": {
+      "inputs": {
+        "STRING": [
+          "440",
+          0
+        ]
+      },
+      "class_type": "Bjornulf_ShowStringText",
+      "_meta": {
+        "title": "👁 Show (String/Text)"
+      }
+    },
+    "468": {
+      "inputs": {
+        "STRING": [
+          "461",
+          7
+        ]
+      },
+      "class_type": "Bjornulf_ShowStringText",
+      "_meta": {
+        "title": "👁 Show String (Last Frame FileName Prefix)"
+      }
+    },
+    "469": {
+      "inputs": {
+        "STRING": [
+          "342",
+          2
+        ]
+      },
+      "class_type": "Bjornulf_ShowStringText",
+      "_meta": {
+        "title": "👁 Show (String/Text)"
+      }
+    },
+    "470": {
+      "inputs": {
+        "STRING": [
+          "345",
+          2
+        ]
+      },
+      "class_type": "Bjornulf_ShowStringText",
+      "_meta": {
+        "title": "👁 Show (String/Text)"
+      }
+    },
+    "471": {
+      "inputs": {
+        "STRING": [
+          "343",
+          2
+        ]
+      },
+      "class_type": "Bjornulf_ShowStringText",
+      "_meta": {
+        "title": "👁 Show (String/Text)"
+      }
+    },
+    "475": {
+      "inputs": {
+        "string": [
+          "465",
+          6
+        ],
+        "text": "F:\\Development\\ComfyUI\\input\\Transitions\\11"
+      },
+      "class_type": "Show String",
+      "_meta": {
+        "title": "Show String"
+      }
+    },
+    "476": {
+      "inputs": {
+        "string": [
+          "465",
+          7
+        ],
+        "text": "11"
+      },
+      "class_type": "Show String",
+      "_meta": {
+        "title": "Show String"
+      }
+    },
+    "478": {
+      "inputs": {
+        "STRING": [
+          "461",
+          10
+        ]
+      },
+      "class_type": "Bjornulf_ShowStringText",
+      "_meta": {
+        "title": "👁 Show String (Previous Last Frame Image Path)"
+      }
+    },
+    "498": {
+      "inputs": {
+        "string": [
+          "424",
+          0
+        ],
+        "text": "AB_11_640"
+      },
+      "class_type": "Show String",
+      "_meta": {
+        "title": "Show String"
+      }
+    },
+    "500": {
+      "inputs": {
+        "images": [
+          "282",
+          0
+        ]
+      },
+      "class_type": "PreviewImage",
+      "_meta": {
+        "title": "Preview Image"
+      }
+    },
+    "501": {
+      "inputs": {
+        "image": [
+          "359",
+          0
+        ],
+        "alpha": [
+          "377",
+          2
+        ]
+      },
+      "class_type": "JoinImageWithAlpha",
+      "_meta": {
+        "title": "Join Image with Alpha"
+      }
+    },
+    "518": {
+      "inputs": {
+        "comparison": "a != b",
+        "a": [
+          "515",
+          0
+        ],
+        "b": [
+          "516",
+          0
+        ]
+      },
+      "class_type": "easy compare",
+      "_meta": {
+        "title": "Compare"
+      }
+    }
+  }

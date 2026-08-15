@@ -1,0 +1,66 @@
+name "svelte-engine"
+description "Bootstrap libwasm + vibe.0 host for svelte-D (wasm-eh, dynamic this.update UI)"
+authors "Etienne Cimon"
+copyright "Copyright © 2019-2026, Etienne Cimon"
+license "MIT"
+dependency "memutils-wasm" version="~>0.9.0"
+dependency "fast-wasm" version="~>0.9.0"
+dependency "diet-wasm" version="~>0.9.0"
+dflags "--wasm-enable-eh" "-mattr=+exception-handling" "-fvisibility=hidden" "-fno-moduleinfo"
+lflags "-strip-all"
+versions "hmr"
+
+targetPath "public"
+targetName "svelte-engine-raw"
+
+sourcePaths "src-d"
+stringImportPaths "src-d-views"
+buildRequirements "allowWarnings"
+
+# Default: LDC master / 1.43 + runtime-v1.43.0 (wasm EH).
+# Binaryen 132 --asyncify crashes Flatten.cpp on try_table — ship the raw
+# module as svelte-engine.wasm. TS instantiate() skips Asyncify when the
+# module has no asyncify_get_state.
+configuration "application" {
+    targetType "executable"
+    dflags "-link-internally" "-defaultlib=" "--foptimize-nothrow=false" "-disable-linker-strip-dead"
+    lflags "-strip-all" "--export=svelte_engine_eh_probe" "--export=svelte_engine_phobos_probe" "--export=jsCallback" "--export=jsCallback0"
+    postBuildCommands "node -e \"require('fs').copyFileSync('public/svelte-engine-raw.wasm','public/svelte-engine.wasm')\""
+    dependency "libwasm" path="../../riscv-compilers/libwasm"
+    subConfiguration "libwasm" "ldc-master"
+    subConfiguration "memutils-wasm" "ldc-master"
+    subConfiguration "fast-wasm" "ldc-master"
+}
+
+configuration "ldc-master" {
+    targetType "executable"
+    dflags "-link-internally" "-defaultlib=" "--foptimize-nothrow=false" "-disable-linker-strip-dead"
+    lflags "-strip-all" "--export=svelte_engine_eh_probe" "--export=svelte_engine_phobos_probe" "--export=jsCallback" "--export=jsCallback0"
+    postBuildCommands "node -e \"require('fs').copyFileSync('public/svelte-engine-raw.wasm','public/svelte-engine.wasm')\""
+    dependency "libwasm" path="../../riscv-compilers/libwasm"
+    subConfiguration "libwasm" "ldc-master"
+    subConfiguration "memutils-wasm" "ldc-master"
+    subConfiguration "fast-wasm" "ldc-master"
+}
+
+# LDC 1.42 + libwasm/runtime-v1.42.0 (named alternate; thin LTO + asyncify).
+configuration "ldc-1.42" {
+    targetType "executable"
+    dflags "-flto=thin"
+    postBuildCommands "wasm-opt --enable-bulk-memory --enable-bulk-memory-opt --asyncify --pass-arg=asyncify-imports@env.libwasm_await__void public/svelte-engine-raw.wasm -o public/svelte-engine.wasm"
+    dependency "libwasm" path="../../riscv-compilers/libwasm"
+    subConfiguration "libwasm" "ldc-1.42"
+    subConfiguration "memutils-wasm" "ldc-1.42"
+    subConfiguration "fast-wasm" "ldc-1.42"
+}
+
+# LDC 1.36 + druntime-wasm + asyncify (conservative cell).
+configuration "ldc-1.36" {
+    targetType "executable"
+    dflags "-flto=full"
+    postBuildCommands "wasm-opt --asyncify --pass-arg=asyncify-imports@env.libwasm_await__void public/svelte-engine-raw.wasm -o public/svelte-engine.wasm"
+    dependency "libwasm" path="../../riscv-compilers/libwasm"
+    subConfiguration "libwasm" "ldc-1.36"
+    subConfiguration "memutils-wasm" "ldc-1.36"
+    subConfiguration "fast-wasm" "ldc-1.36"
+}

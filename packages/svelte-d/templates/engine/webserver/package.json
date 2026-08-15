@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "slideshow3dai-webserver",
+  "description": "Mostly used for handling DB migrations",
+  "version": "1.0.0",
+  "author": "Etienne Cimon <etienne@psxai.com>",
+  "dependencies": {},
+  "devDependencies": {
+    "@prisma/client": "^6.4.0"
+  }
+}

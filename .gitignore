@@ -1,0 +1,30 @@
+# Workspaces and caches
+svelte-engine-ws/
+**/.svelte-d/
+**/.dub/
+**/node_modules/
+
+# Built compiler
+packages/svelte-d/bin/
+packages/svelte-d/lib/
+packages/svelte-d/grammar/generator/*.exe
+**/*.exe
+**/*.pdb
+**/*.dll
+**/*.exp
+**/*.obj
+**/*.wasm
+
+# Secrets — never commit
+.env
+.env.local
+**/.env
+**/.env.local
+!.env.example
+!**/.env.example
+
+# Editor / OS
+.DS_Store
+.idea/
+.vscode/
+*.swp
