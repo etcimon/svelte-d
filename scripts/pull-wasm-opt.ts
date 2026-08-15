@@ -2,9 +2,10 @@
 // Copyright (c) 2026 Etienne Cimon
 // SPDX-License-Identifier: MIT
 //
-// Pull the CI-built etcimon/binaryen wasm-opt for this host (Apple Silicon
-// → darwin-arm64) into binaryen-build/<triple>/ and the toolchain home.
-// Used by bunx svelte-d setup / wasm / build and by macos CI.
+// Pull the CI-built etcimon/binaryen wasm-opt for this host into
+// binaryen-build/<triple>/ and the toolchain home.
+// darwin-arm64 / darwin-x86_64 / linux-x86_64 / linux-aarch64 / windows-x86_64.
+// Used by bunx svelte-d setup / wasm / build and by CI.
 import {
   binaryenBuildVariant,
   ensureForkedWasmOpt,
@@ -22,10 +23,8 @@ if (!bin || !isForkedWasmOpt(bin)) {
   process.exit(3)
 }
 console.log('wasm-opt', bin)
-if (host.os === 'osx' && host.arch === 'arm64') {
-  const n = bin.replace(/\\/g, '/')
-  if (!n.includes('darwin-arm64') && !n.includes('binaryen-svelte-d')) {
-    console.error('Apple Silicon did not install the darwin-arm64 fork')
-    process.exit(3)
-  }
+const n = bin.replace(/\\/g, '/')
+if (!n.includes(triple) && !n.includes('binaryen-svelte-d')) {
+  console.error(`host ${host.os}/${host.arch} did not install the ${triple} fork`)
+  process.exit(3)
 }

@@ -135,17 +135,39 @@ describe('Binaryen ≥123 wasm-opt (try_table parse, no asyncify)', () => {
     expect(DEFAULT_WASM_OPT_RELEASE).toBe('wasm-opt-svelte-d')
     expect(isForkedWasmOpt('/tmp/binaryen-build/linux-x86_64/wasm-opt')).toBe(true)
     expect(isForkedWasmOpt('/tmp/binaryen-build/darwin-arm64/wasm-opt')).toBe(true)
+    for (const triple of [
+      'darwin-arm64',
+      'darwin-x86_64',
+      'linux-x86_64',
+      'linux-aarch64',
+      'windows-x86_64',
+    ]) {
+      expect(forkedWasmOptDownloadUrl(triple)).toContain(`wasm-opt-${triple}.tar.gz`)
+      expect(forkedWasmOptArtifactUrls(triple).some((u) => u.includes(triple))).toBe(true)
+    }
     const root = findBinaryenBuildRoot()
     if (root) expect(root.replace(/\\/g, '/')).toMatch(/binaryen-build$/)
   })
 
-  test('published darwin-arm64 archive is fetchable for Apple Silicon dest builds', async () => {
-    const url = forkedWasmOptDownloadUrl('darwin-arm64')
-    const res = await fetch(url, { redirect: 'follow' })
-    if (!res.ok) return
-    const buf = new Uint8Array(await res.arrayBuffer())
-    expect(buf.length).toBeGreaterThan(1_000_000)
-    expect(buf[0]).toBe(0x1f)
-    expect(buf[1]).toBe(0x8b)
+  test('published wasm-opt archives are gzip for each published triple', async () => {
+    for (const triple of [
+      'darwin-arm64',
+      'darwin-x86_64',
+      'linux-x86_64',
+      'linux-aarch64',
+      'windows-x86_64',
+    ]) {
+      const url = forkedWasmOptDownloadUrl(triple)
+      const res = await fetch(url, { redirect: 'follow' })
+      if (!res.ok) continue
+      const buf = new Uint8Array(await res.arrayBuffer())
+      expect({ triple, bytes: buf.length }).toEqual({
+        triple,
+        bytes: expect.any(Number),
+      })
+      expect(buf.length).toBeGreaterThan(1_000_000)
+      expect(buf[0]).toBe(0x1f)
+      expect(buf[1]).toBe(0x8b)
+    }
   })
 })

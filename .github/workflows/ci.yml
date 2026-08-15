@@ -39,8 +39,7 @@ jobs:
       - name: CLI version
         run: bun bin/svelte-d.ts version
 
-      - name: Pull forked wasm-opt (Apple Silicon)
-        if: runner.os == 'macOS'
+      - name: Pull forked wasm-opt
         run: bun scripts/pull-wasm-opt.ts
 
       - name: Tests
