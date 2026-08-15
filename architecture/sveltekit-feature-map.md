@@ -101,10 +101,9 @@ Parser input is Svelte/SvelteKit source. **Accommodation is not a svelte-d runti
 | `onMount` | Implemented-by-mapping | `void onMount()` after `render` (`propagateOnMount`). Not a JS import. [AGENTS-D-IR-lifetime.md](AGENTS-D-IR-lifetime.md) |
 | `onDestroy` | Implemented-by-mapping | `void onUnmount()` (`unmount` / `removeChild`). Child walk is a libwasm seam. |
 | `{#each}` | Implemented-by-mapping | `UnorderedList` / `List`. HMR `dumpApp`/`loadApp` serializes items as `:l:N:[{item}…]` (`hmr.d`); overlay `hmr-each` is info |
-| `{#await}` | Out-of-scope-for-v1 | not in v1 subset. wasm-eh cannot `.await` ([AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md)); use `JsPromise.then` |
 | `{#key}` | Implemented-by-mapping | `remount!"child"(this)` helper when the key ident changes |
 | unnamed `<slot />` | Implemented-by-mapping | `mixin Slot!("default")` + fallback child |
-| `{#await}` | Implemented-by-mapping | pending/then/catch `@visible`; `JsPromise.then` (no `.await`) |
+| `{#await}` | Implemented-by-mapping | pending/then/catch `@visible`; `wireAwait` is `.await` + `libwasmAwaitFailed()` on the fork, else `JsPromise.then`. Do not wrap the import. ([AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md)) |
 | snippets / named slots | Implemented-by-mapping | `{#snippet}` stored; `{@render}` walks the body as `@child` |
 | `$state` (scalar / `string[]` only) | Implemented-by-mapping | v1 subset → struct field + `update` |
 | `$derived` | Implemented-by-mapping | peel `$derived(expr)` to `expr` (no rune runner) |

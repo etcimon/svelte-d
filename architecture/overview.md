@@ -51,7 +51,7 @@ sequenceDiagram
 - Kit syntax falls through to libwasm / vibe.0 in an equivalent ws tree ([fallthrough.md](fallthrough.md)). Do not invent a third layout. (construction)
 - Kit features are accommodated in svelte-engine / libwasm / vibe.0; compile integrates the engine as the ws bootstrap ([bootstrap.md](bootstrap.md)). svelte-d does not grow a third runtime. (construction)
 - Parse of `.svelte` is Pegged (`SvelteKit:`). Parse of D is libdparse. Not `svelte/compiler`. (construction of K16)
-- Workspace default wasm cell follows **svelte-engine** (`ldc-master` / wasm-eh, Binaryen ≥123 `-Oz`, no `--asyncify`). Named `ldc-1.36` / `ldc-1.42` remain. 1.43 must not advertise `.await`. (construction of the yield protocol)
+- Workspace default wasm cell follows **svelte-engine** (`ldc-master` / wasm-eh). Fork wasm-opt `--asyncify` then `-Oz`; stock 123/132 `-Oz` only. `{#await}` prints `.await` only when `libwasmAwaitSupported()`. Named `ldc-1.36` / `ldc-1.42` remain. (construction of the yield protocol)
 
 ## Extension points
 

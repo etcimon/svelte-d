@@ -4,7 +4,7 @@
 
 Follow libwasm `BUILDING.md`, then this package’s `dub.sdl`.
 
-**Default cell is wasm-eh** (`configuration "application"` = LDC master / 1.43, `subConfiguration "libwasm" "ldc-master"`, copy-raw then Binaryen ≥123 `wasm-opt` with EH features, no `--asyncify`). Named alternates: `ldc-1.42`, `ldc-1.36`.
+**Default cell is wasm-eh** (`configuration "application"` = LDC master / 1.43, `subConfiguration "libwasm" "ldc-master"`, copy-raw then svelte-d `wasm-opt`: fork `--asyncify` then `-Oz`, stock 123/132 `-Oz` only). Named alternates: `ldc-1.42`, `ldc-1.36`.
 
 **Debug vs release.** `buildType "debug"` keeps symbols (name section + DWARF) and `wasm-opt -g -O0` still parses `try_table`. `buildType "release"` is optimize + `lflags -strip-all` then `wasm-opt -Oz --converge --strip-*`. `svelte-d wasm` / `svelte-d build` use release; `svelte-d wasm --debug` and `bun run dev` use debug. On the kit-admin tree that is 12.64 MiB debug wasm versus **0.93 MiB** / 224 KB gzipped shipped. The host `webserver/dub.sdl` has the same pair (`--debug` default, `--release` + `/OPT:REF` on Windows).
 
@@ -65,13 +65,13 @@ Helpers (memutils/fast/diet/optional) PASS on 1.36. Default `application`
 config still blocked on pin `std.numeric` if gammafunction is compiled.
 
 **LDC master / 1.43 cell** (`--config=ldc-master --build=release`):
-`runtime-v1.43.0`, `--foptimize-nothrow=false`, no LTO, no `--asyncify`
-(Binaryen 123/132 Flatten.cpp UNREACHABLE on `try_table`). Binaryen ≥123
-*parses* `try_table`; `svelte-d wasm` runs `-Oz` / `-g -O0` with
-`--enable-exception-handling`. TS `error-handling.ts` installs
-`__cpp_exception` + abort-shaped `captureException`; `instantiate()`
-skips Asyncify when the module has no `asyncify_get_state`. `.await` is
-then a no-op unless JS logs (see svelte-D
+`runtime-v1.43.0`, `--foptimize-nothrow=false`, no LTO. Official Binaryen
+123/132 Flatten.cpp is UNREACHABLE on `try_table`. The etcimon fork
+(`binaryen/` `svelte-d`) `--asyncify`s then `-Oz`. Stock 123/132 stay
+`-Oz` / `-g -O0` with `--enable-exception-handling`. TS
+`error-handling.ts` installs `__cpp_exception`; `instantiate()` wraps
+when `asyncify_get_state` exists. `wireAwait` uses `.await` then, else
+`JsPromise.then` (see svelte-D
 [AGENTS-D-IR-asyncify-wasm-eh.md](../../architecture/AGENTS-D-IR-asyncify-wasm-eh.md)).
 Probes: `slideshow_eh_probe` /
 `slideshow_phobos_probe` (`src-d/probe.d`). Runner:

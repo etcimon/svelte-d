@@ -13,7 +13,7 @@ Closing one is a note edit plus, if it affects a Key Decision, an edit to the lo
 
 - **Package location (was #2):** `riscv-dev/svelte-D/packages/svelte-d/` (K15). Sibling `svelte-d/` rejected (Windows case-fold).
 - **Svelte parse API (was #3):** `svelte` 5.x, `parse({ modern: true })`, no `analyze`, `compile({ generate: false })` diagnostics only (K16).
-- **v1 language subset (was #4 in part):** reject-by-default list in the canonical design. `$derived`/`$effect`/`$props`/`{#await}`/`{#key}`/`<svelte:*>` are out of v1. `$state` scalars/`string[]` only.
+- **v1 language subset (was #4 in part):** reject-by-default list in the canonical design. `$props` is still out of v1. `{#await}` / `{#key}` / `<svelte:*>` / `$derived` / `$effect` are printed. `$state` scalars/`string[]` only.
 - **Universal `load` (was #5):** forbid in v1.
 - **Copied vs live slideshow3dai fixture:** copied `packages/svelte-d/fixtures/slideshow-app/`.
 - **Incrementality:** reprint-skip + opposite-cell-skip + skip-fresh-wasm (G80). Per-`.o` wasm on the default cell (G107: `.svelte-d/o/` + `ldc2 -c` dirty `src-d` + relink libwasm `.a`). LTO cells still whole-program `dub`.
@@ -28,7 +28,7 @@ Closing one is a note edit plus, if it affects a Key Decision, an edit to the lo
 ## Runtimes (unverified facts — do not treat as closed)
 
 5. vibe.0 `dub build` **has not been green** on this host (abs `libs-windows-*`, patched OpenSSL, Botan).
-6. LDC 1.43 + stock Binaryen 123/132 `--asyncify` **fails** (`try_table` / Flatten.cpp UNREACHABLE). Fork: `https://github.com/etcimon/binaryen` branch `svelte-d` (submodule `binaryen/`) starts Flatten `try_table` (keep catch dest types, flatten body). Official ship path stays `-Oz` until the fork wasm-opt is proven on kit-admin + `spa-wasm-eh`. See [AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md).
+6. LDC 1.43 + **stock** Binaryen 123/132 `--asyncify` **fails** (`try_table` / Flatten.cpp UNREACHABLE). The etcimon fork (`binaryen/` `svelte-d`, tag `svelte-d-v0.2.0`) Flattens `try_table` and asyncifies kit-admin; EH probes stay 1. Setup pulls those `wasm-opt` triples from `wasm-opt-binaries` / the rolling release. Official 123/132 remain the `-Oz` fallback. See [AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md).
 7. slideshow3dai `navbar.d` `Exception` + PgLite JSON vs 1.36 `--wasm-enable-eh` untested.
 8. libwasm `yarn dev` / full browser cell marked unrun in that clone’s `open-questions.md`.
 9. `wasm-opt` 132 vs vendored `asyncify.ts` agreement — slideshow3dai lists this as open; 1.42 cell was validated 2026-08-13.

@@ -18,7 +18,8 @@ D  try { throw e; } catch (Exception e) { … }
      →  llvm_wasm_throw → try_table / catch_ref
      →  _d_throw_exception / _Unwind_CallPersonality / _d_eh_enter_catch
      Binaryen ≥123     →  parses try_table; -Oz / -g -O0
-     Binaryen Flatten  →  UNREACHABLE on try_table   (do not --asyncify)
+     Official Flatten  →  UNREACHABLE on try_table   (do not --asyncify)
+     etcimon fork      →  Flatten + Asyncify try_table, then -Oz
 
 D  promise.await;
      types.d:926  →  import env.libwasm_await__void
@@ -110,7 +111,7 @@ These were in **libwasm’s** await/asyncify implementation and the engine copie
 `libwasm/architecture/{flags,js-events-memory,wasm-eh-test}.md`  
 `libwasm/tests/spa-wasm-eh/` — catch probe; **no** asyncify  
 `libwasm/examples/dom-ts/src-d/app.d:102-129` — `.await` under `nothrow` (1.36-shaped)  
-`svelte-engine/dub.sdl:20-66` — copy-raw then svelte-d `wasm-opt` (no `--asyncify` on wasm-eh)  
+`svelte-engine/dub.sdl:20-66` — copy-raw then svelte-d `wasm-opt` (fork `--asyncify` then `-Oz`; stock `-Oz` only)  
 `svelte-engine/src-ts/modules/asyncify.ts` — `DATA_*`, `EXPORTED_FROM_D`, queue, rewind-on-reject  
 `svelte-engine/src-ts/modules/await-status.ts` — last-await flag  
 `svelte-engine/src-ts/modules/libwasm.ts` — `_start`, `libwasm_await__void` / `_supported` / `_failed`  

@@ -12,13 +12,13 @@ slideshow3dai copied here so svelte-D has a **writable golden** that already spe
 
 | Item | slideshow3dai | svelte-engine |
 |---|---|---|
-| Default wasm cell | 1.36 `application` + asyncify | **1.43 wasm-eh** (`application` = `ldc-master` flags; Binaryen ≥123 `-Oz`, no `--asyncify`) |
+| Default wasm cell | 1.36 `application` + asyncify | **1.43 wasm-eh** (`application` = `ldc-master` flags; fork `--asyncify` then `-Oz`; stock 123/132 `-Oz` only) |
 | Generated `dub.sdl` subConfiguration | 1.36 default had none | always pins `libwasm` `ldc-master` / `ldc-1.36` / `ldc-1.42` |
 | Dynamic UI | dock only toggles CSS | dock emits `navigate`; `Main.show` updates heading/status via `this.update` |
 | wasm-eh in UI | unused `SomeException` | navbar button **throws and catches** before PgLite |
 | Probe exports | `slideshow_*_probe` | `svelte_engine_*_probe` |
 | Svelte source | none | `src-svelte/` + `script lang="d"` plan |
-| Host package | `slideshow3dai-server` | `svelte-engine-server` (`vibe-0` `~>1.2.0`) |
+| Host package | `slideshow3dai-server` | `svelte-engine-server` (`vibe-0` `>=1.2.2`) |
 
 ## Journey
 

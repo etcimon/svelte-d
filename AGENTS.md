@@ -6,7 +6,8 @@ kind: original-design-workspace
 purpose: SvelteKit-class D/vibe.0 compiler → Pegged IR → svelte-engine-ws → libwasm and/or vibe.0
 status: Draft 2026-08-14 (D host)
 green_command: bun install && bun test && bunx svelte-d version
-does_not_change: libwasm, vibe.0, slideshow3dai, LDC
+does_not_change: slideshow3dai, LDC
+seams_only: libwasm, vibe.0 (titled floor tags only: libwasm >=0.11.0, vibe-0 >=1.2.2, memutils >=1.0.12)
 host_policy: tracked tier-T MIT (owner 2026-08-14); do not add /svelte-D/ to ../.gitignore; do not silently edit ../.gitignore or ../AGENTS-todo.md
 ```
 

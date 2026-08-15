@@ -32,7 +32,7 @@ svelte-D’s generated recipe for `wasmCell=ldc-1.36` must **not** copy `applica
 2. HMR compatibility: keep `:3001` and string opcodes until bun owns the socket.
 3. Glue templates (copy with attribution).
 4. Host-printer shape: `main` + `URLRouter` + TLS + proxy + `registerWebInterface`.
-5. Negative tests: 1.43 must not asyncify; raw vs final names must stay paired.
+5. Negative tests: stock Binaryen 123/132 must not asyncify `try_table`; the fork may. Raw vs final names must stay paired.
 
 ## What it does not prove
 
