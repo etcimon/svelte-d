@@ -15,10 +15,7 @@ configuration "application" {
     targetName "svelte-d"
     targetPath "bin"
     mainSourceFile "source/app.d"
-    dependency "vibe-0" version=">=1.2.1"
-    dependency "openssl" version="~>3.3.4" repository="git+https://github.com/etcimon/openssl.git"
-    versions "VibeCustomMain" "DeimosOpenSSL_3_0"
-    subConfiguration "openssl" "library-manual-link"
+    // Compiler only. Dest host (svelte-engine-ws/webserver) links vibe-0.
 }
 
 configuration "library" {
