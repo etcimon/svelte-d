@@ -5,3 +5,5 @@ Prebuilt `wasm-opt` from the etcimon/binaryen `svelte-d` fork.
 
 - wasm-opt-darwin-arm64.tar.gz
 - wasm-opt-darwin-x86_64.tar.gz
+- wasm-opt-linux-aarch64.tar.gz
+- wasm-opt-linux-x86_64.tar.gz
