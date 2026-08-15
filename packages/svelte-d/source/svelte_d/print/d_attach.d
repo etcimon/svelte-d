@@ -19,6 +19,7 @@ import svelte_d.libwasm_api;
 import svelte_d.parse.markup;
 import svelte_d.print.dom_print;
 import svelte_d.print.d_imports;
+import svelte_d.print.cross_call;
 import svelte_d.workspace.files;
 import std.path : baseName;
 
@@ -185,9 +186,17 @@ DAttach[] attachDModules(string ws, string srcSvelteRel, SvelteScan scan, string
 			&& !peeled.lines.length)
 		return outp;
 	body = peeled.body;
+	DExport[] liftedEx;
+	body = peelExternCExports(body, liftedEx);
+	auto xc = analyzeCrossCall(srcSvelteRel, scan);
+	if (liftedEx.length)
+		xc.dExports = liftedEx;
+	auto extras = emitTsThunks(xc) ~ emitDExportWrappers(xc);
+	if (xc.dExports.length && !canFind(body, "registerDExports_" ~ xc.ident))
+		body ~= "\nvoid _svelte_d_reg() { registerDExports_" ~ xc.ident ~ "(); }\n";
 	string txt;
 	if (canFind(bodies.join("\n"), "module "))
-		txt = bodies.join("\n\n");
+		txt = bodies.join("\n\n") ~ extras;
 	else
 	{
 		auto imp = (canFind(body, "import libwasm;") || canFind(body, "import libwasm.")
@@ -197,7 +206,7 @@ DAttach[] attachDModules(string ws, string srcSvelteRel, SvelteScan scan, string
 		txt = tmpl.replace("{{SOURCE}}", srcSvelteRel.replace(`\`, `/`))
 			.replace("{{MODULE}}", moduleFromDest(dest))
 			.replace("{{IMPORT}}", imp)
-			.replace("{{BODY}}", body);
+			.replace("{{BODY}}", extras ~ body);
 	}
 	writePrintedDest(abs, txt, DestCell.wasm);
 
@@ -313,6 +322,9 @@ void assembleAwaitReady(string ws, string[] dests)
 				calls ~= "    " ~ recv ~ ".wireAwait();\n";
 			if (canFind(txt, "void wireEach"))
 				calls ~= "    " ~ recv ~ ".wireEach();\n";
+			auto reg = "registerDExports_" ~ identFromRel("lib/" ~ stripExtension(baseName(name)) ~ ".svelte");
+			if (canFind(txt, "void " ~ reg))
+				calls ~= "    " ~ reg ~ "();\n";
 		}
 	}
 	if (!calls.length)

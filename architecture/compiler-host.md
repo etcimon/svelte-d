@@ -13,7 +13,7 @@ Two packages under `packages/`:
 
 Neither package is a sibling `riscv-dev/svelte-d/` (Windows case-fold). bun does **not** parse Svelte; Pegged/scan does.
 
-**Script split (construction):** `lang="d"` → `ws/src-d/` libwasm IR. `lang="ts"` → `ws/src-ts/modules/generated/` + regenerated `index.ts` so `libwasm.init` picks up `jsExports`. See [AGENTS-todo.md](../AGENTS-todo.md) T1/T4.
+**Script split (construction):** `lang="d"` → `ws/src-d/` libwasm IR. `lang="ts"` → `ws/src-ts/modules/generated/` + regenerated `index.ts` so `libwasm.init` picks up `jsExports` **and** `ensureSvelteD().registerTs`. Same-file D calls those exports by the simple name (`callTs`). D `extern(C) export` is `exportDelegate`. npm imports on `lang=ts` fall through onto dest `package.json` + dest `node_modules` (copy + `bun install`). See [cross-calling.md](cross-calling.md) and [AGENTS-todo.md](../AGENTS-todo.md) T1/T4 / G125–G126.
 
 ```
 svelte-d drop-ws [--dest svelte-engine-ws]

@@ -47,6 +47,7 @@ adds routes that **already print**. Do not wait for a new libwasm widget.
 | **I4** | wasm name section | Parse custom `name` section; join `lib.AdminDash.construct` / `_D3lib9AdminDash…` onto dests; `wasm://` frames rewrite only when dest is known; no DWARF; `_start` stays unmapped |
 | **G63** | live `/admin` remount | URLRouter one best `@entering` (static beats `:param`); `{#each}` index is `int i` not `@prop!"dataset"`; `setProperty` skips getter-only; wasm-eh exports `jsCallback`; `callNative('navigate_to')` `/admin` → `/admin/users` keeps `.admin-layout` |
 | **G68** (this pass) | history popstate remount | `dropActive` on leave; re-fire `@entering` on a previously visited route; JS `popstate` → `callNative('navigate_to')` (no test-side native); live back `/admin/logs` → `/admin/features` and `/admin/users/42` |
+| **G125 / G126** | AdminBridge / AdminPeer / `admin-mini` | Dual-script `src/lib/AdminBridge.svelte` + `AdminPeer.svelte` + `admin-fmt.ts`; features page mounts both; `package.json` `admin-mini` `1.0.0` copies into dest `node_modules`; `admin.test.ts` asserts `callTs` / `exportDelegate` / dest range. See [cross-calling.md](cross-calling.md). |
 
 `assembleAppChildren` is still `src-d/lib/` only. **T5** hangs one `@child KitRoutes`
 on `App`. **G53** projects covered pages as `@child` of the matching layout
@@ -197,6 +198,8 @@ rewriter treats those messages as frames when they name a `.d` file.
 `packages/svelte-d/ts/debug.ts` — `loadDebugMap` / `rewriteStack` / `loadOverlay` / `loadInspector` / `destFromWasmName`  
 `packages/svelte-d/ts/wasm_names.ts` — name-section parse + `writeWasmNameMap`  
 `packages/svelte-d-kit-admin/` — consumer + Puppeteer platform  
+`packages/svelte-d-kit-admin/src/lib/{AdminBridge,AdminPeer,admin-fmt.ts}` — G125/G126 fixtures  
+`packages/svelte-d-kit-admin/node_modules/admin-mini/` — local npm fall-through  
 `svelte-engine/src-svelte/routes/admin/` — kit fixtures  
 `src-ts/modules/error-handling.ts` — wasm abort / Exception  
 `architecture/hmr-debug.md` — HMR + overlay + no `generateSourceMap.py`

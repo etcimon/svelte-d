@@ -9,7 +9,7 @@ bun project (SvelteKit)                 svelte-engine-ws
 ────────────────────────────────────────────────────────────────
 src/routes/+page.svelte              →  src-svelte/routes/+page.svelte     source (preserved)
                                      →  src-d/routes/page.d                libwasm (NodeDef, this.update)
-                                     →  src-ts/modules/generated/…         lang=ts jsExports
+                                     →  src-ts/modules/generated/…         lang=ts jsExports + __svelteD.ts
 src/routes/+layout.svelte            →  src-svelte/routes/+layout.svelte
                                      →  src-d/routes/layout.d              @child wrapper (not a 2nd wasm)
 src/lib/Dock.svelte                  →  src-svelte/lib/Dock.svelte
@@ -49,7 +49,8 @@ Compile writes `ws/.svelte-d/fallthrough.json` (`schema: svelte-d-fallthrough/v1
 ## Invariants
 
 - Do not invent a third tree. Cell prefixes are `src-svelte`, `src-d`, `src-ts`, `webserver`. (construction)
-- `lang="d"` falls through to libwasm D. `lang="ts"` falls through to `src-ts/modules` `jsExports`. Host files fall through to vibe.0. (construction)
+- `lang="d"` falls through to libwasm D. `lang="ts"` falls through to `src-ts/modules` `jsExports` **and** `window.__svelteD.ts[ident]`. Crossing is Lodash `callTs` / `exportDelegate` ([cross-calling.md](cross-calling.md)), not a third cell. Host files fall through to vibe.0. (construction)
+- `lang=ts` npm imports fall through from the **project** (declared range + copy of the project’s `node_modules/<pkg>` + dest `bun install` if missing). Do not dump `package.json` and do not `file:` a relative path between two `node_modules`. (construction)
 - Layouts stay mounted `@child`; they are not a second wasm module. (construction of K17)
 - Mapping a path is not a claim the printer has emitted it. Status stays in the feature map. (convention)
 - `mapKitPath` (TS) and `mapKitRel` (D) stay byte-for-byte on field values. (construction of the import API)

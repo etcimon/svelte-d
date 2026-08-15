@@ -18,6 +18,13 @@ Closing one is a note edit plus, if it affects a Key Decision, an edit to the lo
 - **Copied vs live slideshow3dai fixture:** copied `packages/svelte-d/fixtures/slideshow-app/`.
 - **Incrementality:** reprint-skip + opposite-cell-skip + skip-fresh-wasm (G80). Per-`.o` wasm on the default cell (G107: `.svelte-d/o/` + `ldc2 -c` dirty `src-d` + relink libwasm `.a`). LTO cells still whole-program `dub`.
 
+## Closed in the 2026-08-15 G125 / G126 pass
+
+- **D ↔ TS crossing:** Lodash `callTs` / `callTsPromise` on `window.__svelteD.ts`; inverse `exportDelegate` + `setDRet`. Not a second FFI. [cross-calling.md](cross-calling.md).
+- **Helper rewrite on splice:** `$lib` → `helpers/lib/…`; relative → dest helper; `.svelte` → `./<ident>.ts`. Closed the extensions.md open question.
+- **dest npm fall-through:** declared range + **copy** of the project’s `node_modules/<pkg>` + dest `bun install` if missing. `file:` relativePath between two `node_modules` rejected (wrong path + bun EPERM).
+- **Optional args:** variadic `ARGS...` thunks; omitted trailing parameters keep the callee default.
+
 ## Language and IR
 
 1. `PassthroughD` import graph: regex vs D parser.

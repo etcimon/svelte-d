@@ -10,9 +10,10 @@ The svelte→D IR does not talk to the browser. **Printed D does**. The **struct
 | JS compute / collections | `libwasm.lodash` | `Lodash` chain: `defaultTo` / `attempt` / `invoke` / `map` / `filter` / `find` / … then **`execute!T()`**. `Eval` is truthy when `eval_str` is non-empty (`if (predicate)` / `if (iteratee)`). |
 | Time | `libwasm.moment` | `moment(...)` — a `Lodash` wrapper (`m_ld.defaultTo(Eval("moment"))`) |
 | Ad-hoc host objects | same Lodash pattern as `pglite.d` | `defaultTo(Eval("window.pglite"))` + `attempt("query", …).execute!JSON()` |
+| `lang=ts` exports | `libwasm.bridge` | `callTs!T("ident.fn", args)` / `callTsPromise` — Lodash `defaultTo(eval("window.__svelteD.ts")).invoke`. Inverse: `exportDelegate` + `setDRet`. See [cross-calling.md](cross-calling.md). |
 | DOM components | `node` / `dom` / `event` / `spa` | `@child` / `NodeDef` / `this.update` (see [frontend-libwasm.md](frontend-libwasm.md)) |
 
-`import libwasm;` (`package.d:3-17`) already public-imports **bindings, lodash, and moment**. Printed client D starts with `import libwasm;` and then uses those names. It does **not** import TS, lodash npm, or moment npm — those stay in the workspace JS glue (`src-ts/modules/bindings.ts` installs `window._` and `window.moment`).
+`import libwasm;` (`package.d:3-18`) already public-imports **bindings, lodash, moment, and bridge**. Printed client D starts with `import libwasm;` and then uses those names. It does **not** import TS, lodash npm, or moment npm — those stay in the workspace JS glue (`src-ts/modules/bindings.ts` installs `window._` and `window.moment`; `libwasm.ts` plants `window.__svelteD`).
 
 ## How the D syntax actually runs
 
@@ -68,7 +69,8 @@ Script `lang=d` is already D. The walker does **not** translate lodash/moment/bi
 | D arrays / ints / strings | `import std.algorithm` / `std.range` / `std.conv` in `lang=d` (lifted to the printed module header; wasm Phobos, not stock `-Iimport`) |
 | date math / `new Date` | `moment(...)` |
 | `JSON.parse` of a JS value | `execute!JSON()` or binding `json()` on `Response` |
-| unknown `window.foo` | new wrapper like `pglite.d`, or `Lodash().defaultTo(Eval("window.foo"))` — **never** a TS helper |
+| same-file `lang=ts` export `greet` | module-level `greet(ARGS...)` thunk → `callTs` / `callTsPromise` ([cross-calling.md](cross-calling.md)) |
+| unknown `window.foo` (not a `lang=ts` export) | new wrapper like `pglite.d`, or `Lodash().defaultTo(Eval("window.foo"))` — **never** a printed `import` of a TS helper in `src-d/` |
 | `{#each}` of D structs | `UnorderedList!T` (DOM). `{#each}` of a JS collection first `.execute`s into D / handles, then the list |
 
 IR node kinds (additions to [ir.md](ir.md)):
@@ -84,7 +86,8 @@ v1 subset: emit bindings that already exist in `source/libwasm/bindings/` (looku
 
 ## Loci
 
-`libwasm/source/libwasm/package.d:3-17` — barrel (bindings + lodash + moment)  
+`libwasm/source/libwasm/package.d:3-18` — barrel (bindings + lodash + moment + bridge)  
+`libwasm/source/libwasm/bridge.d` — `callTs` / `callTsPromise` / `setDRet`  
 `libwasm/source/libwasm/lodash.d:14-26` `VarType`; `:325` `struct Lodash`; `:4334` `invoke`; `:5217` `attempt`; `:5486` `defaultTo`; `:5530` `execute!T`  
 `libwasm/source/libwasm/moment.d:10-72` — `moment()` / `format` / `utc`  
 `libwasm/source/libwasm/bindings/Document.d:77` — `struct Document`  
@@ -96,7 +99,7 @@ v1 subset: emit bindings that already exist in `source/libwasm/bindings/` (looku
 
 ## Invariants
 
-- Client D uses `Handle` + bindings + Lodash + Moment. No `extern(C)` JS one-offs unless a binding is missing and the seam is named. (construction)
+- Client D uses `Handle` + bindings + Lodash + Moment + `bridge.callTs`. No `extern(C)` JS one-offs unless a binding is missing and the seam is named. `extern(C) export` for TS to call is `exportDelegate`, not a new import table. (construction)
 - `execute!T()` is the only way a Lodash chain becomes a D value. (construction of lodash.d)
 - Moment and PgLite-style wrappers are Lodash. Do not emit a second JS bridge. (construction)
 - lodash/moment **npm** stay in the workspace JS shell; D never `import`s them. (construction)

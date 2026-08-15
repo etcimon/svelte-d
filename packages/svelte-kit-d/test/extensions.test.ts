@@ -124,6 +124,21 @@ describe('ingest imported svelte + local ts/scss', () => {
     const j = JSON.parse(readFileSync(pin, 'utf8'))
     expect(j.schema).toBe('svelte-d-wasm-ldc/v1')
     expect(j.cell).toBe('wasm-eh')
+    const wsPkg = JSON.parse(readFileSync(join(ws, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>
+    }
+    const fg = wsPkg.dependencies?.['fake-grid'] ?? ''
+    expect(fg.length).toBeGreaterThan(0)
+    expect(fg === '0.0.0' || fg.startsWith('file:')).toBe(true)
+    expect(existsSync(join(ws, 'node_modules', 'fake-grid', 'package.json'))).toBe(true)
+    expect(JSON.parse(readFileSync(join(ws, 'node_modules', 'fake-grid', 'package.json'), 'utf8')).name).toBe(
+      'fake-grid'
+    )
+    const pageTs = join(ws, 'src-ts', 'modules', 'generated', identFromRel('routes/+page.svelte') + '.ts')
+    expect(existsSync(pageTs)).toBe(true)
+    const pageBody = readFileSync(pageTs, 'utf8')
+    expect(pageBody).toContain("from 'fake-grid'")
+    expect(pageBody).toMatch(/from ['\"]\.\.\/\.\.\/helpers\/lib\/bridge['\"]/)
   })
 })
 

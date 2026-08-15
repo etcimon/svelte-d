@@ -10,6 +10,7 @@ import {
   compileWorkspace,
   dropWorkspace,
   extractDomUdas,
+  identFromRel,
   loadDebugMap,
   loadInspector,
   loadOverlay,
@@ -272,6 +273,76 @@ describe('kit-admin compile: IR, debug-map, vibe.0 PG/Redis/JSON', () => {
     expect(ir.kinds.if).toBeGreaterThan(0)
     expect(ir.dests.some((d) => d.includes('AdminDash.d'))).toBe(true)
     expect(ir.dests.some((d) => d.includes('routes/admin/page.d'))).toBe(true)
+  })
+
+  test('cross-language / multi-tag scripts and project deps fall through to dest', () => {
+    const ws = adminWorkspace()
+    expect(compileWorkspace({ ws, project }).status).toBe(0)
+
+    const bridgeIdent = identFromRel('lib/AdminBridge.svelte')
+    const gen = join(ws, 'src-ts', 'modules', 'generated')
+    const inst = join(gen, bridgeIdent + '.ts')
+    const mod = join(gen, bridgeIdent + '_mod.ts')
+    expect(existsSync(inst)).toBe(true)
+    expect(existsSync(mod)).toBe(true)
+
+    const tsInst = readFileSync(inst, 'utf8')
+    expect(tsInst).toContain("from 'admin-mini'")
+    expect(tsInst).toMatch(/from ['\"]\.\.\/\.\.\/helpers\/lib\/admin-fmt['\"]/)
+    expect(tsInst).toContain('registerTs')
+    expect(tsInst).toContain('label')
+    expect(tsInst).toContain('loadLabel')
+    expect(tsInst).toContain('...args')
+    expect(tsInst).not.toContain('registerTs("'+bridgeIdent+'", "jsExports"')
+
+    const tsMod = readFileSync(mod, 'utf8')
+    expect(tsMod).toContain('adminBridgeReady')
+    expect(tsMod).toContain('registerTs')
+    expect(tsMod).toContain(bridgeIdent + '_mod')
+
+    const d = readFileSync(join(ws, 'src-d', 'lib', 'AdminBridge.d'), 'utf8')
+    expect(d).toContain('callTs!(string)')
+    expect(d).toContain(bridgeIdent + '.label')
+    expect(d).toContain('callTsPromise!(string)')
+    expect(d).toContain(bridgeIdent + '.loadLabel')
+    expect(d).toContain('ARGS...')
+    expect(d).toContain('extern(C) export int tally')
+    expect(d).toContain('int b = 1')
+    expect(d).toContain('exportDelegate("' + bridgeIdent + '.tally"')
+    expect(d).toContain('registerDExports_' + bridgeIdent)
+    expect(d).toContain('label("Ada")')
+    expect(d).toContain('label()')
+
+    const peer = readFileSync(join(ws, 'src-d', 'lib', 'AdminPeer.d'), 'utf8')
+    expect(peer).toContain('import lib.AdminBridge')
+    expect(peer).toContain('label("Peer")')
+
+    const feat = readFileSync(join(ws, 'src-d', 'routes', 'admin', 'features', 'page.d'), 'utf8')
+    expect(feat).toMatch(/AdminBridge|adminBridge/)
+    expect(feat).toMatch(/AdminPeer|adminPeer/)
+
+    const app = readFileSync(join(ws, 'src-d', 'app.d'), 'utf8')
+    expect(app).toContain('@child AdminBridge adminBridge')
+    expect(app).toContain('@child AdminPeer adminPeer')
+
+    expect(existsSync(join(ws, 'src-ts', 'modules', 'helpers', 'lib', 'admin-fmt.ts'))).toBe(true)
+    expect(readFileSync(join(ws, 'src-ts', 'modules', 'helpers', 'lib', 'admin-fmt.ts'), 'utf8')).toContain(
+      'export function fmt'
+    )
+
+    const wsPkg = JSON.parse(readFileSync(join(ws, 'package.json'), 'utf8')) as {
+      dependencies?: Record<string, string>
+    }
+    expect(wsPkg.dependencies?.['admin-mini']).toBe('1.0.0')
+    expect(existsSync(join(ws, 'node_modules', 'admin-mini', 'package.json'))).toBe(true)
+    expect(JSON.parse(readFileSync(join(ws, 'node_modules', 'admin-mini', 'package.json'), 'utf8')).name).toBe(
+      'admin-mini'
+    )
+    expect(readFileSync(join(ws, 'node_modules', 'admin-mini', 'index.js'), 'utf8')).toContain('dash')
+
+    const idx = readFileSync(join(ws, 'src-ts', 'modules', 'index.ts'), 'utf8')
+    expect(idx).toContain(bridgeIdent)
+    expect(idx).toContain(bridgeIdent + '_mod')
   })
 
   test('kit-routes CLI lists /admin tree including :id and features', () => {

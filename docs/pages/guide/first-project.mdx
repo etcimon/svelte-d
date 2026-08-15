@@ -80,7 +80,7 @@ The layout is the smallest file that still exercises three IR families at once. 
 </div>
 ```
 
-The `context="module"` TypeScript is not decorative. It splices into `src-ts/modules/generated/` so `libwasm.init` has a named export the tests (and your own `jsExports`) can see. The D does not import it. Dual-script files do both cells’ jobs without mixing them.
+The `context="module"` TypeScript is not decorative. It splices into `src-ts/modules/generated/` so `libwasm.init` has a named export the tests (and your own `jsExports`) can see, and it registers on `__svelteD.ts[<ident>_mod]`. Same-file D may call those exports by the simple name (`callTs`). Dual-script files do both cells’ jobs without mixing them. See [cross-calling](./cross-calling).
 
 ## Dashboard — `{#if}` plus a component
 

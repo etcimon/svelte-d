@@ -3,7 +3,7 @@
 Two scripts per `.svelte` (both are first-class):
 
 - **`<script lang="d">`** — libwasm-format D. Lands in `svelte-engine-ws/src-d/`. `svelte.config.js` blanks this block so vscode-svelte / svelte-check do not parse D as TS.
-- **`<script lang="ts">` / `context="module"`** — nominal TypeScript the IDE parses. svelte-d **attaches** the body into `src-ts/modules/generated/*.ts` using the `jsExports` template (`libwasm.init` merges `modules[].jsExports`).
+- **`<script lang="ts">` / `context="module"`** — nominal TypeScript the IDE parses. svelte-d **attaches** the body into `src-ts/modules/generated/*.ts` using the `jsExports` template (`libwasm.init` merges `modules[].jsExports`) and `ensureSvelteD().registerTs`. Same-file D calls those exports by the simple name (`callTs`). See svelte-D `architecture/cross-calling.md`.
 
 The svelte-d compiler (`../svelte-D/packages/svelte-d/`) is a **D / vibe.0** program. It scans both blocks, libdparse-checks `lang=d` / `+*.d`, and does not use npm `svelte/compiler`.
 

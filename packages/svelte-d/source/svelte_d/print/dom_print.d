@@ -13,6 +13,8 @@ import std.uni : isAlphaNum;
 import svelte_d.parse.svelte;
 import svelte_d.parse.markup;
 import svelte_d.print.d_imports;
+import svelte_d.print.cross_call;
+import svelte_d.fallthrough : identFromRel;
 
 struct DomPrint
 {
@@ -740,6 +742,11 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 			dbody ~= s.body.strip ~ "\n";
 	auto peeled = peelAuthorImports(dbody, ImportCell.wasm);
 	dbody = peeled.body;
+	DExport[] liftedEx;
+	dbody = peelExternCExports(dbody, liftedEx);
+	auto xc = analyzeCrossCall(srcRel, scan);
+	if (liftedEx.length)
+		xc.dExports = liftedEx;
 	r.authorImports = keptMods(peeled);
 	r.rejectedImports = rejectedMods(peeled);
 	string[] runeMount;
@@ -797,6 +804,8 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 	string[] constructLines;
 	string[] itemFieldSyncs;
 	dbody = peelRuntimeInits(dbody, constructLines);
+	if (xc.dExports.length)
+		constructLines ~= "    registerDExports_" ~ xc.ident ~ "();";
 	if (cssText.length)
 		constructLines ~= "    addCss(\"" ~ escapeDString(cssText) ~ "\");";
 	string[] onMountLines;
@@ -2768,6 +2777,8 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 		nestTxt = nestTxt.replace("// svelte-d:kids " ~ sname ~ "\n", ins);
 	}
 	acc ~= nestTxt;
+	acc ~= emitTsThunks(xc);
+	acc ~= emitDExportWrappers(xc);
 
 	r.hasList = sawList;
 	r.hasInject = true; // m_pool inject on every compiled struct

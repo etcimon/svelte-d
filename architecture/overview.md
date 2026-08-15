@@ -6,7 +6,7 @@ svelte-D is a **D program** that links **vibe.0 as a library**. It does not impl
 
 A representative production request after a `svelte-d build` is: TLS accept on the vibe.0 process (`listenHTTP` at `vibe.0/source/vibe/http/server.d:77`), one libasync fiber per connection (`architecture/overview.md` in that clone), `URLRouter.handleRequest`, either a generated `+server`/`load` handler or a static/prerendered file, and — for document routes — an HTML string builder plus a `<script>` that fetches `*.wasm` (never `*-raw.wasm` on the 1.36/1.42 cells). The wasm `_start` (`libwasm/source/libwasm/spa.d:114-146`) initialises `WasmAllocator` from `__heap_base`, injects `GetCss`, `compile()`s structs, optionally `setupRouter()`, and `libwasm.dom.render`s into the JS handle table. Promises only yield if Binaryen `--asyncify` listed `env.libwasm_await__void` (`types.d:181`). None of that is svelte-D’s to reimplement.
 
-A representative **dev** save is: svelte-d (or later `svelte-d serve`) sees `svelte-engine-ws/src-svelte/routes/foo/+page.svelte`, Pegged-parses it, libdparse-checks the `lang=d` body, recomputes IR hashes, reprints only the dirty cone into `ws/src-d/`, then rebuilds **only the dirty cell** inside the ws (K6: per-`.o` `src-d` + relink on the default no-LTO cell, G107; LTO cells still whole-program `dub`), rewrites `ws/.svelte-d/manifest.json`, and sends `reload` on the HMR websocket so `dumpApp`/`loadApp` can tear down handles `> 2`. One wasm artifact per app (K17).
+A representative **dev** save is: svelte-d (or later `svelte-d serve`) sees `svelte-engine-ws/src-svelte/routes/foo/+page.svelte`, Pegged-parses it, libdparse-checks the `lang=d` body, recomputes IR hashes, reprints only the dirty cone into `ws/src-d/`, splices `lang=ts` into `ws/src-ts/modules/generated/` (`jsExports` + `__svelteD.ts`), falls through npm specs onto dest `package.json` / `node_modules`, then rebuilds **only the dirty cell** inside the ws (K6: per-`.o` `src-d` + relink on the default no-LTO cell, G107; LTO cells still whole-program `dub`), rewrites `ws/.svelte-d/manifest.json`, and sends `reload` on the HMR websocket so `dumpApp`/`loadApp` can tear down handles `> 2`. One wasm artifact per app (K17). Crossing the two scripts is Lodash `callTs` / `exportDelegate` ([cross-calling.md](cross-calling.md)), not a third cell.
 
 ```mermaid
 sequenceDiagram
@@ -52,6 +52,7 @@ sequenceDiagram
 - Kit features are accommodated in svelte-engine / libwasm / vibe.0; compile integrates the engine as the ws bootstrap ([bootstrap.md](bootstrap.md)). svelte-d does not grow a third runtime. (construction)
 - Parse of `.svelte` is Pegged (`SvelteKit:`). Parse of D is libdparse. Not `svelte/compiler`. (construction of K16)
 - Workspace default wasm cell follows **svelte-engine** (`ldc-master` / wasm-eh). Fork wasm-opt `--asyncify` then `-Oz`; stock 123/132 `-Oz` only. `{#await}` prints `.await` only when `libwasmAwaitSupported()`. Named `ldc-1.36` / `ldc-1.42` remain. (construction of the yield protocol)
+- `lang=ts` is spliced into `src-ts` `jsExports` and `__svelteD.ts`. Crossing is `callTs` / `exportDelegate`, not a new WASM import list. (construction)
 
 ## Extension points
 

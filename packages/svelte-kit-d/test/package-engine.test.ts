@@ -28,7 +28,7 @@ describe('svelte-engine is packaged inside svelte-d', () => {
     expect(existsSync(join(engine, 'webserver', 'source', 'app.d'))).toBe(true)
     expect(existsSync(join(engine, 'webserver', 'dub.sdl'))).toBe(true)
     const sdl = readFileSync(join(engine, 'dub.sdl'), 'utf8')
-    expect(sdl).toContain('version=">=0.11.0"')
+    expect(sdl).toContain('version=">=0.11.1"')
     expect(sdl).toContain('github.com/etcimon/libwasm')
     expect(sdl).not.toMatch(/dependency "libwasm" path=/)
     expect(sdl).not.toContain('version="~master"')

@@ -7,7 +7,7 @@ purpose: SvelteKit-class D/vibe.0 compiler → Pegged IR → svelte-engine-ws �
 status: Draft 2026-08-14 (D host)
 green_command: bun install && bun test && bunx svelte-d version
 does_not_change: slideshow3dai, LDC
-seams_only: libwasm, vibe.0 (titled floor tags only: libwasm >=0.11.0, vibe-0 >=1.2.2, memutils >=1.0.12)
+seams_only: libwasm, vibe.0 (titled floor tags only: libwasm >=0.11.1, vibe-0 >=1.2.2, memutils >=1.0.12)
 host_policy: tracked tier-T MIT (owner 2026-08-14); do not add /svelte-D/ to ../.gitignore; do not silently edit ../.gitignore or ../AGENTS-todo.md
 ```
 
@@ -33,6 +33,7 @@ Canonical long-form design (Key Decisions, alternatives, security, full PR plan)
 | bun package, CLI build, include in a SvelteKit app | [`architecture/package.md`](architecture/package.md), [`README.md`](README.md) |
 | One LDC 1.43 (CLI + vibe.0 + wasm) on Windows/macOS/Linux | [`architecture/engine-setup.md`](architecture/engine-setup.md) |
 | Third-party Svelte / SCSS / jQuery / lang=ts splice | [`architecture/extensions.md`](architecture/extensions.md) |
+| lang=d ↔ lang=ts calling; dest npm fall-through | [`architecture/cross-calling.md`](architecture/cross-calling.md) |
 | License of this work **and** of D/LDC/libwasm/vibe.0/Svelte/Binaryen/asyncify | [`LICENSE.md`](LICENSE.md), [`architecture/licensing.md`](architecture/licensing.md) |
 | End-to-end compile + runtime journey | [`architecture/overview.md`](architecture/overview.md) |
 | IR, hashes, `.svelte-d/` cache, incremental cones | [`architecture/ir.md`](architecture/ir.md) |

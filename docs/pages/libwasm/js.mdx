@@ -42,7 +42,7 @@ auto n = Lodash(someHandle, VarType.handle, 256)
 
 `VarType` tags the init value: `handle`, `boolean`, `string_`, `number`, `decimal`, `eval`, and five callback shapes (`Handle_string__bool`, `Handle_long__bool`, …). Iteratees are `extern(C)` delegates. `Eval` is truthy when `eval_str` is non-empty, which is why `if (predicate)` / `if (iteratee)` in the chain methods can skip an empty default.
 
-The escape hatches for “call this JS name with these D args” are `defaultTo`, `attempt`, and `invoke`. That is how Moment and PgLite are written — **not** a second FFI.
+The escape hatches for “call this JS name with these D args” are `defaultTo`, `attempt`, and `invoke`. That is how Moment and PgLite are written — **not** a second FFI. Same-file `lang=ts` exports use the same Lodash path through `callTs` / `callTsPromise` (`libwasm.bridge`): `defaultTo(eval("window.__svelteD.ts")).invoke("ident.fn", args).execute!T()`. Inverse D→TS registration is `exportDelegate` plus `setDRet`. See [cross-calling](../language/cross-calling).
 
 ```d
 auto ld = Lodash();
@@ -103,4 +103,4 @@ struct PgLite {
 
 ## What this page is not
 
-It is not the way to build a button. It is not a reason to `import` vibe.0 from `lang=d`. It is not a reason to `eval("document.foo")` from TypeScript and call that the IR. Typed talk is bindings. Untyped talk is Lodash. Time is moment. Unknown `window.foo` is a PgLite-style wrapper. Everything else is a titled seam in libwasm.
+It is not the way to build a button. It is not a reason to `import` vibe.0 from `lang=d`. It is not a reason to `eval("document.foo")` from TypeScript and call that the IR. Typed talk is bindings. Untyped talk is Lodash. Time is moment. A `lang=ts` export is `callTs`. Unknown `window.foo` is a PgLite-style wrapper. Everything else is a titled seam in libwasm.

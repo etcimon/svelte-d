@@ -22,7 +22,7 @@ bunx svelte-d wasm --ws . --debug    # symbols for IR work (`wasm-opt -g -O0`)
 Or `dub build --arch=wasm32-unknown-wasi --compiler=ldc2 --config=application --build=release`.
 Probes: `svelte_engine_eh_probe` / `svelte_engine_phobos_probe` (`node run-probes.mjs`). Binaryen ≥123 parses `try_table` and `-Oz`s the ship module. The etcimon/binaryen fork also `--asyncify`s it; probes must still return 1 (D catch). Landing pad and `.await` stay in different functions. Kit-admin release is **0.93 MiB** / 224 KB gzipped.
 
-libwasm is `dependency "libwasm" version=">=0.11.0"` from `github.com/etcimon/libwasm`.
+libwasm is `dependency "libwasm" version=">=0.11.1"` from `github.com/etcimon/libwasm`.
 A live checkout is optional (`dub add-local`); otherwise DUB fetches.
 
 ## Host (vibe.0)

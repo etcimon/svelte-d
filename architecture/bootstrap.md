@@ -37,7 +37,7 @@ The IR svelte-d writes toward is **the D svelte-engine already builds** ([../sve
 | Cell | Format | Engine locus |
 |---|---|---|
 | wasm | idiomatic libwasm (`mixin Spa!App`, `NodeDef`, `@child`, `this.update`, Lodash / moment / bindings, `pglite.d`) | `svelte-engine/src-d/` |
-| JS glue | `jsExports` folded by `libwasm.init` | `svelte-engine/src-ts/modules/` |
+| JS glue | `jsExports` folded by `libwasm.init`; `window.__svelteD` for `callTs` / `exportDelegate` | `svelte-engine/src-ts/modules/` |
 | host | idiomatic vibe.0 (`VibeCustomMain`, `listenHTTP`, `URLRouter`) | `svelte-engine/webserver/` |
 
 JSON under `ws/.svelte-d/ir/` is a cache key, not a second language.

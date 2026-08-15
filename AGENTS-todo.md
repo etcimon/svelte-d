@@ -30,7 +30,7 @@ blocked_on:  none
 A **Svelte / SvelteKit program** (nominal `.svelte` the official language server can attach to) is compiled by **svelte-d** (D + vibe.0 + Pegged spec + libdparse; importable as `import { … } from 'svelte-d'`) into **svelte-engine-ws**, then **served** as:
 
 - wasm frontend = libwasm IR (`ws/src-d/`, including `lang="d"` and PgLite)
-- JS glue = `ws/src-ts/modules/` with **`lang="ts"` functions registered** via the libwasm `jsExports` template
+- JS glue = `ws/src-ts/modules/` with **`lang="ts"` functions registered** via `jsExports` **and** `window.__svelteD.ts[ident]` (`callTs` / `exportDelegate`)
 - host = vibe.0 (`ws/webserver`)
 - bun DX / HMR = `packages/svelte-kit-d` (`bun test`, `bun src/cli.ts dev` → Vite `:5173` + WS `:3001` + optional `:8180`)
 
@@ -39,7 +39,7 @@ Two script languages in one `.svelte` file, **not** one or the other:
 | Block | Where it lands in svelte-engine-ws | Why |
 |---|---|---|
 | `<script lang="d">` | `src-d/*.d` libwasm (`NodeDef`, `this.update`, `Lodash`, `moment`, `bindings`) | Wasm cell. IDE: svelte.config.js blanks `lang=d` so the Svelte LS does not parse D as TS. |
-| `<script lang="ts">` or `context="module" lang="ts"` | `src-ts/modules/generated/*.ts` exporting `jsExports`, merged into `modules/index.ts` | JS cell. **This** is what vscode-svelte / tsserver parse. `libwasm.init` already folds every `jsExports`. |
+| `<script lang="ts">` or `context="module" lang="ts"` | `src-ts/modules/generated/*.ts` exporting `jsExports`, merged into `modules/index.ts`; `registerTs(ident, name)` | JS cell. vscode-svelte / tsserver parse this. `libwasm.init` folds `jsExports`. Same-file D calls the simple name (`callTs`). |
 | `+page.server.d` / `+server.d` | `webserver/source/generated/` | Host cell (vibe.0). |
 
 Do not put `lang="d"` into `src-ts/`. Do not put `lang="ts"` into `src-d/`. Do not parse with npm `svelte/compiler`.
@@ -175,6 +175,8 @@ Do not put `lang="d"` into `src-ts/`. Do not put `lang="ts"` into `src-d/`. Do n
 | G122 | await then text | `{:then v}` `{v}` filled from `libwasmAwaitValue()` after rewind; stock `.then` notes the Any handle first | `await-cases.ts` + `await-asyncify.test.ts` |
 | G123 | multi-await wire | each `{#await}` job gets its own `wireAwait` block; first keeps `await_then` / `await_catch`; later jobs use `await_*_<job>` and snapshot `{e}`/`{v}` paths | `await-cases.ts` |
 | G124 | await bind uniquify | two `{:catch e}{e}` emit `eP` / `eP2` (unique field + struct); wire snapshots each path so both fills stay | `await-cases.ts` |
+| G125 | d↔ts callTs | `lang=ts` exports → `__svelteD.ts[ident]` + `jsExports.env`; D thunks `callTs`/`callTsPromise` (Lodash invoke, optional args); `extern(C) export` → `exportDelegate(ident.fn)`; multi-script + cross-svelte `import lib.X : greet` | `cross-call.test.ts` |
+| G126 | ts dep fall-through | `lang=ts` npm imports → dest `package.json` (project declared range) + dest `node_modules/<pkg>` **copy** of the project’s install + `bun install` if missing; `$lib` / relative rewrite; not `file:` | `extensions.test.ts` + `admin.test.ts` |
 
 Recorded limits: Pegged `mixin(grammar)` stack-overflows (use `grammar/sveltekit.peg` as spec + runtime scan). Template `comfyapi.d` / `dmaxminddb` stubbed. 1.43 wasm has no asyncify.
 
@@ -249,15 +251,15 @@ Printer emits the libwasm D IR ([udas.md](architecture/udas.md), [AGENTS-D-IR-li
 
 **Green (G16+G17):** `dom.test.ts` 5 pass — lifetime + assemble + `{#if}` `@visible`. `{:else}` still skipped.
 
-### T4 — `lang="ts"` registration template (complete)
+### T4 — `lang="ts"` registration template (complete; G125 extends)
 
 - Template file in `packages/svelte-d/templates/js-module.ts.tmpl`.
 - If the TS block already `export let jsExports`, copy through.
-- Else wrap exported functions as `jsExports.env.<name>`.
-- Rewrite `src-ts/modules/index.ts` from `templates/modules-index.ts.tmpl` (always keep `bindings`, `spa`, `libwasm`).
-- `window.callNative` / `libwasm_set__function` remain the D↔TS seam.
+- Else wrap exported functions as `jsExports.env.<name>(...args)` **and** `ensureSvelteD().registerTs(ident, name, fn)`. Skip name `jsExports`.
+- Rewrite `src-ts/modules/index.ts` from `templates/modules-index.ts.tmpl` (always keep `bindings`, `spa`, `libwasm`, `debug-bridge`).
+- **G125 seam:** D→TS is Lodash `callTs` / `callTsPromise` on `__svelteD.ts`. TS→D is `exportDelegate` + `callNative` (`setDRet` / `__svelteD.ret`). Not a new WASM import list. See [cross-calling.md](architecture/cross-calling.md).
 
-**Green:** bun test that a `lang="ts"` `hello()` appears in `ws/src-ts/modules/generated/` and `index.ts` imports it.
+**Green:** bun test that a `lang="ts"` `hello()` appears in `ws/src-ts/modules/generated/` and `index.ts` imports it. G125: `cross-call.test.ts`. G126: dest deps in `extensions.test.ts` + `admin.test.ts`.
 
 ### T5 — Kit filesystem + layouts
 
@@ -325,7 +327,7 @@ Reprint-skip + opposite-cell-skip; G80 skips the relink when dests are unchanged
 - Printed D uses libwasm lifetime hooks (`construct` / `onMount` / `onUnmount` / App `ready`). One `Spa!App`. Printed structs hang as `@child`. No Svelte JS `onMount`.
 - wasm-eh cell: `wireAwait` `.await` (fork) or `.then` (stock); keep `--foptimize-nothrow=false`. Official post-link is Binaryen ≥123 `wasm-opt -Oz` / `-g -O0` with `--enable-exception-handling`. Official 123/132 still must not `--asyncify` `try_table`. Fork `binaryen-svelte-d` does. Landing pad must not wrap `libwasm_await__void`.
 - Kit features are accommodated in svelte-engine / libwasm / vibe.0. Compile integrates the current engine as svelte-engine-ws. svelte-d only prints that D IR.
-- `lang="d"` → libwasm D. `lang="ts"` → `src-ts/modules` `jsExports`. No crossing.
+- `lang="d"` → libwasm D. `lang="ts"` → `src-ts/modules` `jsExports`. Crossing is Lodash `callTs` / `exportDelegate` with module-mangled names.
 - Pegged/libdparse never enter the wasm `dub.sdl`.
 - PgLite stays the persistence wrap (`pglite.d` / `window.pglite`).
 - Do not mutate slideshow3dai, libwasm, vibe.0 unless a titled seam PR.
@@ -456,3 +458,6 @@ Pegged `asModule` vs scan; HMR port 3579 vs 3001; `bun install` in ws for Vite; 
 | 2026-08-15 | wasm-opt | Binaryen ≥123 official post-link: parse try_table, -Oz release / -g -O0 debug, never --asyncify; kit-admin ship 0.93 MiB / 224 KB gzip |
 | 2026-08-15 | binaryen | fork etcimon/binaryen; submodule binaryen/ branch svelte-d; Flatten try_table start; bun run build-wasm-opt |
 | 2026-08-15 | wasm-eh+ay | fork asyncify LDC try_table; eh_probe=1 on ship; throwBoundary IR; run-probes raw+asyncify |
+| 2026-08-15 | G125 | d↔ts `callTs` / `exportDelegate`; module-mangled `__svelteD`; optional `ARGS...`; `cross-call.test.ts` |
+| 2026-08-15 | G126 | dest npm = declared range + copy of project install + `bun install`; `$lib` rewrite; admin `admin-mini` |
+| 2026-08-15 | docs | architecture/cross-calling.md + stale notes/human pages match g126 |

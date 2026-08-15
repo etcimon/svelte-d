@@ -17,6 +17,7 @@ import svelte_d.workspace.files;
 import svelte_d.workspace.ingest;
 import svelte_d.workspace.wasm_build;
 import svelte_d.print.ts_attach;
+import svelte_d.workspace.ws_deps;
 import svelte_d.print.d_attach;
 import svelte_d.print.kit_router;
 import svelte_d.print.kit_env;
@@ -72,6 +73,7 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 	size_t ok, fail;
 	string[] lines;
 	string[] allTs;
+	string[] npmSpecs;
 	string[] hangDests;
 	HostAttach[] hostAtts;
 	OverlayDiag[] diags;
@@ -92,7 +94,7 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 		auto rel = relativePath(k.path, srcSvelte).replace("\\", "/");
 		if (!matchesOnly(rel, only))
 			continue;
-		enum printerPin = "g124";
+		enum printerPin = "g126";
 		auto srcSha = printerPin ~ ":" ~ shaFile(k.path);
 		if (k.path.extension == ".svelte")
 		{
@@ -104,6 +106,7 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 				if (prev.dest.length >= 10 && prev.dest[0 .. 10] == "src-d/lib/")
 					hangDests ~= prev.dest;
 				nextHash[rel] = *prev;
+				collectNpmFromSvelte(k.path, npmSpecs);
 				ok++;
 				continue;
 			}
@@ -125,7 +128,7 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 			else
 			{
 				ok++;
-				allTs ~= attachTsModules(ws, rel, t);
+				allTs ~= attachTsModules(ws, rel, t, npmSpecs);
 				if (t.hasLang("d"))
 				{
 					detail = "libwasm-d";
@@ -271,6 +274,17 @@ int compileWorkspace(string ws, string project = null, string[] only = null)
 			foreach (de; dirEntries(libDir, "*.d", SpanMode.shallow))
 				hangDests ~= "src-d/lib/" ~ baseName(de.name);
 		}
+	}
+	if (exists(srcSvelte))
+	{
+		foreach (de; dirEntries(srcSvelte, "*.svelte", SpanMode.depth))
+			collectNpmFromSvelte(de.name, npmSpecs);
+	}
+	if (project.length)
+	{
+		auto depChanged = syncWsDependencies(project, ws, npmSpecs);
+		if (depChanged || wsDepsMissing(ws, npmSpecs))
+			installWsDeps(ws);
 	}
 	rewriteModulesIndex(ws, allTs);
 	writeFallthroughFile(ws);

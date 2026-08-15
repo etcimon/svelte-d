@@ -164,7 +164,24 @@ export function buildDirtyCells(
 /** bun install in the ws when Vite is missing (drop skips node_modules). */
 export function ensureWsDeps(ws: string): RunResult {
   const viteJs = join(ws, 'node_modules', 'vite', 'package.json')
-  if (existsSync(viteJs)) {
+  let need = !existsSync(viteJs)
+  const pkgPath = join(ws, 'package.json')
+  if (!need && existsSync(pkgPath)) {
+    try {
+      const pkg = JSON.parse(readFileSync(pkgPath, 'utf8')) as {
+        dependencies?: Record<string, string>
+      }
+      for (const name of Object.keys(pkg.dependencies ?? {})) {
+        if (!existsSync(join(ws, 'node_modules', name, 'package.json'))) {
+          need = true
+          break
+        }
+      }
+    } catch {
+      need = true
+    }
+  }
+  if (!need) {
     return { status: 0, stdout: 'vite already installed\n', stderr: '', via: 'exe' }
   }
   const r = spawnSync('bun', ['install'], {

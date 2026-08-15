@@ -5,41 +5,66 @@ import std.path;
 import std.string : replace, strip, indexOf;
 import std.array : appender;
 import std.conv : to;
-import std.algorithm : sort;
+import std.algorithm : sort, canFind;
 import svelte_d.parse.svelte;
 import svelte_d.fallthrough : identFromRel;
 import svelte_d.workspace.files;
-
-private string wrapJsExports(string body)
-{
-	if (indexOf(body, "jsExports") >= 0)
-		return "";
-	return q{
-export const jsExports = { env: {} as Record<string, unknown> };
-};
-}
+import svelte_d.print.cross_call;
 
 /// Write each lang=ts script into src-ts/modules/generated (libwasm jsExports template).
-string[] attachTsModules(string ws, string srcSvelteRel, SvelteScan scan)
+/// Every exported function is registered on `window.__svelteD.ts[ident]` even
+/// when no lang=d block calls it. Multiple tags get distinct mangled idents.
+/// `npmOut` collects bare import specs for dest package.json fall-through.
+string[] attachTsModules(string ws, string srcSvelteRel, SvelteScan scan, ref string[] npmOut)
 {
 	string[] idents;
 	auto genDir = buildPath(ws, "src-ts", "modules", "generated");
 	mkdirRecurse(genDir);
-	size_t n;
+	size_t nInst, nMod;
 	enum pkgTmpl = import("js-module.ts.tmpl");
 	foreach (s; scan.scripts)
 	{
 		if (s.lang != "ts")
 			continue;
-		++n;
-		auto id = identFromRel(srcSvelteRel) ~ (s.moduleContext ? "_mod" : "") ~ (n > 1 ? to!string(n) : "");
+		string id;
+		if (s.moduleContext)
+		{
+			++nMod;
+			id = identFromRel(srcSvelteRel) ~ "_mod" ~ (nMod > 1 ? to!string(nMod) : "");
+		}
+		else
+		{
+			++nInst;
+			id = identFromRel(srcSvelteRel) ~ (nInst > 1 ? to!string(nInst) : "");
+		}
+		auto body = rewriteTsImports(s.body.strip, srcSvelteRel, npmOut);
+		auto exps = parseTsExports(body);
 		auto outTxt = pkgTmpl.replace("{{SOURCE}}", srcSvelteRel)
-			.replace("{{BODY}}", s.body.strip)
-			.replace("{{WRAP}}", wrapJsExports(s.body));
+			.replace("{{BODY}}", body)
+			.replace("{{WRAP}}", emitTsTrailer(id, exps, body));
 		writeIfChanged(buildPath(genDir, id ~ ".ts"), outTxt, DestCell.meta);
 		idents ~= id;
 	}
 	return idents;
+}
+
+/// Hash-skip path: still collect npm specs so dest package.json stays complete.
+void collectNpmFromSvelte(string sveltePath, ref string[] npmOut)
+{
+	if (!exists(sveltePath))
+		return;
+	auto t = parseSvelteFile(sveltePath);
+	if (!t.successful)
+		return;
+	foreach (s; t.scripts)
+	{
+		if (s.lang != "ts")
+			continue;
+		foreach (im; parseTsImports(s.body))
+			if (im.spec.length && !canFind(npmOut, im.spec)
+					&& im.spec[0] != '.' && im.spec[0] != '/' && im.spec[0] != '$')
+				npmOut ~= im.spec;
+	}
 }
 
 void rewriteModulesIndex(string ws, string[] generatedIdents)

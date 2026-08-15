@@ -21,11 +21,11 @@ Statuses match [sveltekit-feature-map.md](sveltekit-feature-map.md):
 
 | Official node | Svelte syntax | svelte-d | Accommodation |
 |---|---|---|---|
-| `Root.instance` | `<script>` / `<script lang="d">` | Printed | `lang=d` → `src-d`; other → ignored unless `lang=ts` |
-| `Root.module` | `<script context="module" lang="ts">` | Printed | `jsExports` in `src-ts/modules/generated/` |
+| `Root.instance` | `<script>` / `<script lang="d">` | Printed | `lang=d` → `src-d`; `extern(C) export` peeled + `exportDelegate` (G125) |
+| `Root.module` | `<script context="module" lang="ts">` | Printed | `jsExports` + `__svelteD.ts[<ident>_mod]` in `src-ts/modules/generated/` |
 | `Root.css` | `<style>` | Printed | strip the block; `addCss` + `@style!".ident"`; `:global(.wide)` still yields `.wide` |
 | `Root.options` | `<svelte:options>` | Printed | `// svelte:options name=value` on the host (`ComboRest.svelte`) |
-| `Script` `lang=ts` | instance TS | Printed | same as module if `lang=ts` |
+| `Script` `lang=ts` | instance TS | Printed | splice + `registerTs(ident, name)`; same-file D thunks `callTs` / `callTsPromise`; npm imports fall through (G126) |
 | `Script` runes | `$state` / `$derived` / `$effect` / `$props` | Partial | `$state`/`$derived` peel to the inner expr; `$effect` body → `onMount`; `$props` stripped (parent assigns `@child` fields) |
 
 ## Text and tags

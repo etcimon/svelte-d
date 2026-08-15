@@ -4,6 +4,7 @@
 export default {
   index: 'The IR contract',
   scripts: 'Scripts, style, runes',
+  'cross-calling': 'Cross-calling d ↔ ts',
   elements: 'Elements & components',
   text: 'Text, {expr}, {@html}',
   events: 'on: → Slot / @connect',

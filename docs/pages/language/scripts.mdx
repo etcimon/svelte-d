@@ -17,7 +17,7 @@ See [script lang="d"](../guide/script-lang-d) for the author-facing contract, [l
 
 ## `<script lang="ts">` and `context="module"`
 
-These are spliced into `src-ts/modules/generated/` and folded into `libwasm.init`. They are not parsed as D and not printed as D. Other `lang` values are ignored. They are not a consolation compile. See [lang=ts splice](../guide/script-lang-ts).
+These are spliced into `src-ts/modules/generated/` and folded into `libwasm.init`. Exported functions are also registered on `window.__svelteD.ts[<module>]` so `lang=d` can call them by the simple name. See [cross-calling](./cross-calling) and [lang=ts splice](../guide/script-lang-ts). Other `lang` values are ignored.
 
 ## `<style>`
 

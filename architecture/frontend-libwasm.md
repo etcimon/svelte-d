@@ -10,7 +10,7 @@ The client printer’s job is to lower IR `Component`/`Page`/`Layout`/`Template`
 
 `libwasm.router` (`router.d`) is experimental: `:name`, `*`, `maxRouteParameters = 64` (`router.d:44`), entering/leaving/always callbacks returning `Optional!(Promise!void)`, popstate + `exportDelegate("navigate_to")` (`router.d:237`). Engine `debug-bridge.ts` + `libwasm.ts` listen for `popstate` and call `callNative('navigate_to', location.pathname)` (wasm-eh `onpopstate` UDA is not reliable). `navigateTo` does not `pushState` when the browser path already matches. Leaving **drops** the route from `m_activeRoutes`; a later visit (back/forward) still fires `@entering` even if the route was seen before, so kit `setVisible` + `applyKitParams` re-run. It is **not** SvelteKit. The printer may emit patterns it can express (`/foo/:id`, trailing `*`). Layouts are **not** router entries — they stay mounted as `@child` wrappers; the page is swapped in the entering callback. `goto` / `invalidate` / `beforeNavigate` / prefetch / true hydration (attach handles to existing SSR DOM) are **Requires-new-libwasm-seam**. Until those exist, do not print APIs that call them.
 
-JS glue is copied from slideshow3dai / libwasm `examples/dom-ts` (`libwasm.ts`, `asyncify.ts`, `spa.ts`, `bindings.ts`, `error-handling.ts`), parameterized from the manifest (today `libwasm.ts:113` hard-codes `slideshow3dai.wasm`). Google’s `asyncify.ts` is Apache-2.0 — keep the header. `DATA_END = 1048576` (`asyncify.ts:36`) must match `ldc2.conf` stack. New `extern(C)` imports must be appended to `wasm-opt --asyncify-imports` (construction).
+JS glue is copied from slideshow3dai / libwasm `examples/dom-ts` (`libwasm.ts`, `asyncify.ts`, `spa.ts`, `bindings.ts`, `error-handling.ts`), parameterized from the manifest (today `libwasm.ts:113` hard-codes `slideshow3dai.wasm`). Engine `libwasm.ts` also plants `window.__svelteD` (`ensureSvelteD`) so `lang=ts` exports and `exportDelegate` share one registry ([cross-calling.md](cross-calling.md)). Google’s `asyncify.ts` is Apache-2.0 — keep the header. `DATA_END = 1048576` (`asyncify.ts:36`) must match `ldc2.conf` stack. New `extern(C)` imports must be appended to `wasm-opt --asyncify-imports` (construction).
 
 **Do not emit:** vibe.0 imports, Phobos I/O over JS handles (use `Lodash`), `new Date` (use `moment`), a virtual DOM, GC classes as the primary component model, or raw `extern(C)` JS. **Do emit** author `import std.algorithm` / `std.conv` / `std.range` (spa-phobos cell) at **module** scope — not inside the `nothrow` struct, not `std.file` / `std.stdio` / `std.socket`. slideshow3dai / svelte-engine use `ManagedPool(64 * 1024)` in `App.construct` — pools, not `new` trees. Language `new` bumps `WasmAllocator` and is never recycled. A live `ScopedPool` takes `alloc` / `_d_allocmemory` / `allocString`. Heavy printed methods wrap that pool and copy survivors onto the NodeDef graph. See [AGENTS-D-IR-memory-management.md](AGENTS-D-IR-memory-management.md).
 
@@ -30,6 +30,7 @@ libwasm live HEAD `64a97ce` / `v0.10.0` (2026-08-14); `AGENTS.md` pin `02f21a6` 
 `css.d:689` `GetCss`  
 `slideshow3dai/src-d/navbar.d` — `@child`, `@callback`, `@connect`, `UnorderedList`, `Slot`  
 `slideshow3dai/src-ts/modules/spa.ts:31-572` `jsExports.env`  
+`svelte-engine/src-ts/modules/libwasm.ts:39-76` `ensureSvelteD` / `registerTs` / `registerD` / `callNative` returns `reg.ret`  
 `libwasm/architecture/{overview,flags,js-events-memory,ctfe-apps}.md`  
 [AGENTS-D-IR-memory-management.md](AGENTS-D-IR-memory-management.md) — `ScopedPool` / `rt/memory.d` fall-through
 
@@ -45,7 +46,7 @@ libwasm live HEAD `64a97ce` / `v0.10.0` (2026-08-14); `AGENTS.md` pin `02f21a6` 
 
 ## Extension points
 
-New DOM/Web API: generate or hand-write under `libwasm/bindings/` *in that tree* (webidl), then emit the D call. New JS library: Lodash wrap like `pglite.d` + `window.X` in TS glue. New Svelte syntax: lowerer arm or a hard diagnostic — never a JS fallback in the wasm module.
+New DOM/Web API: generate or hand-write under `libwasm/bindings/` *in that tree* (webidl), then emit the D call. New JS library: Lodash wrap like `pglite.d` + `window.X` in TS glue, **or** a `lang=ts` export reached by `callTs` ([cross-calling.md](cross-calling.md)). New Svelte syntax: lowerer arm or a hard diagnostic — never a JS fallback in the wasm module.
 
 ## Did not close
 

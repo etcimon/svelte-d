@@ -9,6 +9,8 @@ A bun project does not live on `lang=d` alone. It imports a Svelte grid from `no
 
 What is *not* ingested is “everything in `package.json`.” Dumping `dependencies` into the engine’s `package.json` was considered and rejected. Only files the app actually imports (or a declared extension list, if you add one later) are copied. A React or Vue widget has no `.svelte` to print; it is Host-JS-only and stays in `src-ts`. Inventing D IR for it would be a third stack.
 
+`lang=ts` npm **imports** are a narrower fall-through than that dump. The dest `package.json` gets the project’s **declared range** for each specifier the TS body actually wrote. Dest `node_modules/<pkg>` gets a **copy** of the project’s install when it exists, then `compile` runs `bun install` in the dest if the package is still missing. `$lib/foo` rewrites to `src-ts/modules/helpers/lib/foo`. That is how `admin-mini` and `fake-grid` reach Vite in `svelte-engine-ws` without a `file:` path between two `node_modules`.
+
 | Project file | Workspace dest | Who runs it |
 |---|---|---|
 | imported `node_modules/<pkg>/**/*.svelte` | `src-svelte/ext/<pkg>/` and `src-d/ext/…` | the same printer |
@@ -17,4 +19,4 @@ What is *not* ingested is “everything in `package.json`.” Dumping `dependenc
 | `public/**` | `ws/public/` | vibe.0 static files |
 | JS-only widget | stay in `src-ts` | Host-JS-only |
 
-D that must call that JavaScript uses `Eval("window.$")` or `jsExports.env`, the same way `pglite.d` reaches PgLite. It does not grow an FFI.
+D that must call a `lang=ts` export uses the simple name (`callTs`). D that must call a window host object uses `Eval("window.$")`, the same way `pglite.d` reaches PgLite. It does not grow an FFI. See [cross-calling](./cross-calling).

@@ -9,6 +9,10 @@ svelte-engine-ws/
 !packages/svelte-kit-d/test/fixtures/**/node_modules/
 !packages/svelte-kit-d/test/fixtures/**/node_modules/**
 
+# Local admin-mini fixture for dest npm fall-through (G126).
+!packages/svelte-d-kit-admin/node_modules/admin-mini/
+!packages/svelte-d-kit-admin/node_modules/admin-mini/**
+
 # CI / setup-placed wasm-opt triples (LICENSE + README stay)
 binaryen-build/*/
 binaryen-build/dist/

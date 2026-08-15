@@ -11,6 +11,7 @@
     "start": "bun src/cli.ts dev"
   },
   "dependencies": {
+    "admin-mini": "1.0.0",
     "svelte-d": "workspace:*"
   },
   "optionalDependencies": {

@@ -310,5 +310,17 @@ void dropWorkspace(string dest, string srcTemplate, bool force)
 			}
 		}
 	}
+	if (force)
+	{
+		auto hashes = buildPath(dest, ".svelte-d", "src-hash.txt");
+		if (exists(hashes))
+		{
+			try
+				remove(hashes);
+			catch (Exception)
+			{
+			}
+		}
+	}
 	writeln("dropped ", srcTemplate, " -> ", dest, " (overlay ", n, " files)");
 }

@@ -34,6 +34,47 @@ var freelist: any[] = [];
 var wasm_constants_decoded = new Map<number, string>();
 var heap_base_value: any;
 
+export type SvelteDFn = (...args: any[]) => any;
+
+export type SvelteDRegistry = {
+  ts: Record<string, Record<string, SvelteDFn>>;
+  d: Record<string, Record<string, SvelteDFn>>;
+  ret: any;
+  setRet: (v: any) => void;
+  registerTs: (mod: string, name: string, fn: SvelteDFn) => void;
+  registerD: (mod: string, name: string, fn?: SvelteDFn) => void;
+};
+
+/** Module-mangled 2-way registry. Lodash `invoke("mod.fn", …)` reads `.ts`. */
+export function ensureSvelteD(): SvelteDRegistry {
+  const w = window as any;
+  if (!w.__svelteD) {
+    const reg: SvelteDRegistry = {
+      ts: {},
+      d: {},
+      ret: undefined,
+      setRet(v: any) {
+        this.ret = v;
+      },
+      registerTs(mod: string, name: string, fn: SvelteDFn) {
+        if (!this.ts[mod]) this.ts[mod] = {};
+        this.ts[mod][name] = (...args: any[]) => fn(...args);
+      },
+      registerD(mod: string, name: string, fn?: SvelteDFn) {
+        if (!this.d[mod]) this.d[mod] = {};
+        this.d[mod][name] =
+          fn ||
+          ((...args: any[]) =>
+            (window as any).callNative(mod + '.' + name, args));
+      },
+    };
+    w.__svelteD = reg;
+  }
+  return w.__svelteD as SvelteDRegistry;
+}
+
+ensureSvelteD();
+
 const addObject = (value: any) => {
   if (value === null || value == undefined) return 0;
   let idx: number = 0;
@@ -123,13 +164,16 @@ const libwasm: any = {
         (window.ao = libwasm.addObject);
       window.es = encoders.string;
       window.nodes = libwasm.objects;
-      window.callNative = async (fct_name: string, val: any) => {
+      window.callNative = async (fct_name: string, val: any = []) => {
+        const reg = ensureSvelteD();
+        reg.ret = undefined;
         let fct = libwasm.nativeFunctionMap[fct_name];
         if (fct && fct.fun) {
-          let handle = addObject(val);
+          let handle = addObject(val ?? []);
           // Must await: jsCallback is an Asyncify-wrapped export.
           // Overlapping callbacks are serialized in wrapExportFn.
           await libwasm.instance.exports.jsCallback(fct.ctx, fct.fun, handle);
+          return reg.ret;
         } else console.error(`Function ${fct_name} is not registered.`);
       };
     }

@@ -23,6 +23,8 @@
     <ComboNest />
     <ComboCover />
     <ComboSurf />
+    <AdminBridge />
+    <AdminPeer />
   {/if}
   {#each items as item}
     <li class:on>{item}</li>
