@@ -1,5 +1,5 @@
 name "svelte-d"
-version "0.2.0"
+version "0.2.1"
 description "SvelteKit → D compiler (vibe.0 + Pegged + libdparse). Importable exe + lib + TS."
 authors "Etienne Cimon"
 copyright "Copyright © 2026, Etienne Cimon"
