@@ -13,6 +13,8 @@ svelte-engine-ws/
 binaryen-build/*/
 binaryen-build/dist/
 .wasm-opt-binaries-work/
+release/
+release-seed/
 
 # Built compiler
 packages/svelte-d/bin/

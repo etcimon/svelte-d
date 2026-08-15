@@ -607,8 +607,19 @@ function locateBuiltWasmOpt(root: string): string {
 }
 
 /**
+ * Source rebuild is opt-in. A pulled CI artifact must not compile Binaryen
+ * just because the submodule and cmake are on the machine.
+ */
+export function shouldBuildWasmOptFromSource(haveForked: boolean): boolean {
+  if (process.env.SVELTE_D_NO_BUILD_WASM_OPT === '1') return false
+  if (process.env.SVELTE_D_BUILD_WASM_OPT === '1') return true
+  return !haveForked
+}
+
+/**
  * Configure + build `wasm-opt` from the etcimon/binaryen submodule.
  * Installs to ~/.svelte-d/toolchains/binaryen-svelte-d. Needs CMake + a C++ toolchain.
+ * Skips the compile when a pulled/installed fork already works.
  */
 export function buildWasmOptFromSource(
   src = findBinaryenSource(),
@@ -623,8 +634,10 @@ export function buildWasmOptFromSource(
   const dest = forkedWasmOptHome()
   const exe = wasmOptExeName()
   const installed = join(dest, 'bin', exe)
+  if (existsSync(installed) && isWasmOptNew(installed) && !shouldBuildWasmOptFromSource(true))
+    return installed
   const flatten = join(src, 'src', 'passes', 'Flatten.cpp')
-  if (existsSync(installed) && existsSync(flatten)) {
+  if (existsSync(installed) && existsSync(flatten) && !shouldBuildWasmOptFromSource(true)) {
     try {
       if (statSync(installed).mtimeMs >= statSync(flatten).mtimeMs) return installed
     } catch {
@@ -1162,11 +1175,11 @@ export async function setupPlatform(
   }
   const src = findBinaryenSource(opts.start)
   const cmake = findCMake()
+  const haveForked = Boolean(wasmOpt && isForkedWasmOpt(wasmOpt))
   const wantForkBuild =
     Boolean(src && cmake) &&
-    process.env.SVELTE_D_NO_BUILD_WASM_OPT !== '1' &&
     opts.download !== false &&
-    (process.env.SVELTE_D_BUILD_WASM_OPT === '1' || !wasmOpt)
+    shouldBuildWasmOptFromSource(haveForked)
   if (wantForkBuild) {
     try {
       wasmOpt = buildWasmOptFromSource(src, cmake)

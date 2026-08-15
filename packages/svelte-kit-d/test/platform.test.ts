@@ -20,6 +20,7 @@ import {
   hostTriple,
   DEFAULT_WASM_OPT_RELEASE,
   isForkedWasmOpt,
+  shouldBuildWasmOptFromSource,
   isLdc143Text,
   isWasmOptNewText,
   ldcDownloadUrl,
@@ -147,6 +148,27 @@ describe('Binaryen ≥123 wasm-opt (try_table parse, no asyncify)', () => {
     }
     const root = findBinaryenBuildRoot()
     if (root) expect(root.replace(/\\/g, '/')).toMatch(/binaryen-build$/)
+  })
+
+  test('shouldBuildWasmOptFromSource skips cmake when a fork was pulled', () => {
+    const prevN = process.env.SVELTE_D_NO_BUILD_WASM_OPT
+    const prevB = process.env.SVELTE_D_BUILD_WASM_OPT
+    try {
+      delete process.env.SVELTE_D_NO_BUILD_WASM_OPT
+      delete process.env.SVELTE_D_BUILD_WASM_OPT
+      expect(shouldBuildWasmOptFromSource(true)).toBe(false)
+      expect(shouldBuildWasmOptFromSource(false)).toBe(true)
+      process.env.SVELTE_D_NO_BUILD_WASM_OPT = '1'
+      expect(shouldBuildWasmOptFromSource(false)).toBe(false)
+      delete process.env.SVELTE_D_NO_BUILD_WASM_OPT
+      process.env.SVELTE_D_BUILD_WASM_OPT = '1'
+      expect(shouldBuildWasmOptFromSource(true)).toBe(true)
+    } finally {
+      if (prevN === undefined) delete process.env.SVELTE_D_NO_BUILD_WASM_OPT
+      else process.env.SVELTE_D_NO_BUILD_WASM_OPT = prevN
+      if (prevB === undefined) delete process.env.SVELTE_D_BUILD_WASM_OPT
+      else process.env.SVELTE_D_BUILD_WASM_OPT = prevB
+    }
   })
 
   test('published wasm-opt archives are gzip for each published triple', async () => {

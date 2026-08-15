@@ -132,6 +132,7 @@ export {
   findBinaryenBuildRoot,
   findCMake,
   buildWasmOptFromSource,
+  shouldBuildWasmOptFromSource,
   isForkedWasmOpt,
   forkedWasmOptHome,
   forkedWasmOptDownloadUrl,

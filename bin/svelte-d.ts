@@ -23,6 +23,7 @@ if (process.argv[2] === 'setup') {
 }
 
 if (process.argv[2] === 'wasm' || process.argv[2] === 'build') {
+  process.env.SVELTE_D_NO_BUILD_WASM_OPT = '1'
   const { ensureForkedWasmOpt } = await import('../packages/svelte-d/ts/platform.ts')
   try {
     const bin = await ensureForkedWasmOpt()

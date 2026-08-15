@@ -113,6 +113,7 @@ export function compileWorkspace(
 }
 
 function pinForkedWasmOpt(): void {
+  process.env.SVELTE_D_NO_BUILD_WASM_OPT = '1'
   try {
     const bin = ensureForkedWasmOptSync()
     if (bin) process.env.SVELTE_D_WASM_OPT = bin

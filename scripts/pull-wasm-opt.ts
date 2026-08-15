@@ -13,6 +13,7 @@ import {
   isForkedWasmOpt,
 } from '../packages/svelte-d/ts/platform.ts'
 
+process.env.SVELTE_D_NO_BUILD_WASM_OPT = '1'
 const triple = binaryenBuildVariant()
 const host = hostTriple()
 console.log('host   ', host.os, host.arch, host.variant)
@@ -28,3 +29,4 @@ if (!n.includes(triple) && !n.includes('binaryen-svelte-d')) {
   console.error(`host ${host.os}/${host.arch} did not install the ${triple} fork`)
   process.exit(3)
 }
+console.log('pulled — did not compile Binaryen (SVELTE_D_NO_BUILD_WASM_OPT=1)')
