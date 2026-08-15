@@ -14,6 +14,12 @@
  * limitations under the License.
  */
 
+import {
+  formatAwaitReason,
+  recordAwaitFail,
+  recordAwaitOk,
+} from './await-status';
+
 // Put `__asyncify_data` somewhere at the start.
 // This address is pretty hand-wavy and we might want to make it configurable in future.
 // See https://github.com/WebAssembly/binaryen/blob/6371cf63687c3f638b599e086ca668c04a26cbbb/src/passes/Asyncify.cpp#L106-L113
@@ -21,13 +27,17 @@
 
 // _start must be wrapped: App.construct / ready / default navigateTo that
 // .await would unwind and never rewind if called raw (libwasm.ts).
-const EXPORTED_FROM_D = [
+// wireAwait now calls JsPromise.await; that import only rewinds if the
+// export that reached it is wrapped.
+export const EXPORTED_FROM_D = [
   '_start',
   'domEvent',
   'jsCallback0',
   'jsCallback',
   'loadApp',
   'dumpApp',
+  'svelte_engine_eh_probe',
+  'svelte_engine_phobos_probe',
 ];
 
 // Start unwind buffers halfway through the stack space
@@ -40,7 +50,7 @@ const DATA_END = 1048576;
 
 const WRAPPED_EXPORTS = new WeakMap();
 
-const State = {
+export const State = {
   None: 0,
   Unwinding: 1,
   Rewinding: 2,
@@ -60,12 +70,20 @@ function proxyGet(obj: any, transform: any) {
   });
 }
 
-class Asyncify {
+export class Asyncify {
   exports: any;
   value: any;
+  lastError: unknown;
+  failed: boolean;
+  lastExport: string;
+  queue: Promise<unknown>;
   constructor() {
     this.value = undefined;
     this.exports = null;
+    this.lastError = null;
+    this.failed = false;
+    this.lastExport = '';
+    this.queue = Promise.resolve();
   }
 
   getState() {
@@ -125,14 +143,28 @@ class Asyncify {
       return newExport;
     }
 
-    newExport = async (...args: any) => {
+    const run = async (...args: any) => {
       this.assertNoneState();
+      this.lastExport = exportName;
       try {
         let result = await fn(...args);
 
         while (this.getState() === State.Unwinding) {
           this.exports.asyncify_stop_unwind();
-          this.value = await this.value;
+          // Reject must still rewind: landing pads are not on this stack,
+          // but ScopedPool dtors are. Record the reason; D reads it after
+          // rewind (libwasm_await_failed). Do not throw before start_rewind.
+          try {
+            this.value = await this.value;
+            this.lastError = null;
+            this.failed = false;
+            recordAwaitOk(exportName);
+          } catch (e) {
+            this.lastError = e;
+            this.failed = true;
+            this.value = null;
+            recordAwaitFail(e, exportName);
+          }
           this.assertNoneState();
           this.exports.asyncify_start_rewind(DATA_ADDR);
           result = await fn(...args);
@@ -143,9 +175,28 @@ class Asyncify {
       } catch (e) {
         // Keep WebAssembly.Exception so wasm-eh host hooks can see it.
         // Do not wrap it in a generic Error (that hid D throws from spa.ts).
-        console.log('While calling: ', exportName, args);
+        const rewrite =
+          typeof window !== 'undefined'
+            ? (window as any).__svelteDRewriteError
+            : null;
+        const shown =
+          typeof rewrite === 'function' ? rewrite(e) : formatAwaitReason(e);
+        console.log('While calling: ', exportName, args, shown);
         throw e;
       }
+    };
+
+    // One in-flight unwind. Overlapping domEvent/jsCallback corrupt state.
+    newExport = (...args: any) => {
+      const p = this.queue.then(
+        () => run(...args),
+        () => run(...args)
+      );
+      this.queue = p.then(
+        () => undefined,
+        () => undefined
+      );
+      return p;
     };
 
     WRAPPED_EXPORTS.set(fn, newExport);
@@ -199,14 +250,16 @@ export class Instance extends WebAssembly.Instance {
 
 Object.defineProperty(Instance.prototype, 'exports', { enumerable: true });
 
-function moduleHasAsyncify(mod: WebAssembly.Module) {
+export function moduleHasAsyncify(mod: WebAssembly.Module) {
   return WebAssembly.Module.exports(mod).some(
     (e) => e.name === 'asyncify_get_state'
   );
 }
 
-/// Raw (no Binaryen asyncify) instantiate. Used for LDC 1.43 wasm-eh
-/// modules — Binaryen 132 Flatten.cpp crashes on try_table + --asyncify.
+/// Raw instantiate. Used when the module has no asyncify_get_state
+/// (stock Binaryen 123/132 cannot --asyncify try_table). The
+/// etcimon/binaryen fork emits asyncify_get_state; instantiate() then
+/// wraps exports. EH probes still run without wrapping (no await).
 export async function instantiateRaw(source: any, imports: any) {
   const result = await WebAssembly.instantiate(source, imports);
   return result instanceof WebAssembly.Instance

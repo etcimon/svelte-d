@@ -4,5 +4,7 @@ import * as spa from './spa.ts';
 import * as libwasm from './libwasm.ts';
 import * as errorHandling from './error-handling.ts';
 import * as debugBridge from './debug-bridge.ts';
+import * as asyncify from './asyncify.ts';
+import * as awaitStatus from './await-status.ts';
 const modules = [bindings, spa, libwasm, debugBridge];
-export { libwasm, modules, errorHandling, debugBridge };
+export { libwasm, modules, errorHandling, debugBridge, asyncify, awaitStatus };

@@ -1161,8 +1161,10 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 		}
 		if (n.kind == MkNode.Kind.await_)
 		{
-			// Host JsPromise: pending first, settle via .then / .error (G92).
-			// No job: already-resolved — show {:then} (G87). Never print .await.
+			// Host JsPromise: pending first. wireAwait uses .await when the
+			// ship module is asyncified (fork), else JsPromise.then (G92).
+			// No job: already-resolved — show {:then} (G87). Never wrap
+			// .await in try/catch — landing pad stays off the import.
 			auto jobName = ident(n.text);
 			auto settleThen = !hostHasName(jobName) && !hostHasPromise(jobName);
 			string pendChild, thenChild, catchChild;
@@ -2617,25 +2619,37 @@ DomPrint printDomComponent(string destRel, string srcRel, string hostName, Svelt
 				~ ".node.handle.handle > 2 || " ~ val ~ ")\n"
 				~ "      setVisible!\"" ~ child ~ "\"(" ~ tgt ~ ", " ~ val ~ ");\n";
 		}
+		auto thenVis = vis(awaitWirePend, "await_pending", "false")
+			~ vis(awaitWireThen, "await_then", "true")
+			~ vis(awaitWireCatch, "await_catch", "false");
+		auto catchVis = vis(awaitWirePend, "await_pending", "false")
+			~ vis(awaitWireThen, "await_then", "false")
+			~ vis(awaitWireCatch, "await_catch", "true");
 		acc ~= "  void wireAwait() @trusted\n  {\n";
+		acc ~= "    import await_status;\n";
 		acc ~= "    if (" ~ awaitWireJob ~ ".handle.handle <= 2)\n    {\n";
 		acc ~= "      auto _awr = document().fonts().ready();\n";
 		acc ~= "      " ~ awaitWireJob ~ ".handle.handle = _awr.handle.handle;\n";
 		acc ~= "      _awr.handle.handle = 0;\n    }\n";
 		acc ~= "    if (" ~ awaitWireJob ~ ".handle.handle > 2)\n    {\n";
-		acc ~= "      " ~ awaitWireJob ~ ".then(delegate void(Any _v) {\n";
-		acc ~= vis(awaitWirePend, "await_pending", "false");
-		acc ~= vis(awaitWireThen, "await_then", "true");
-		acc ~= vis(awaitWireCatch, "await_catch", "false");
-		acc ~= "      });\n";
+		acc ~= "      if (libwasmAwaitSupported())\n      {\n";
+		acc ~= "        " ~ awaitWireJob ~ ".await;\n";
+		acc ~= "        if (libwasmAwaitFailed())\n        {\n";
+		acc ~= catchVis;
+		acc ~= "        }\n        else\n        {\n";
+		acc ~= thenVis;
+		acc ~= "        }\n";
+		acc ~= "      }\n      else\n      {\n";
+		acc ~= "        " ~ awaitWireJob ~ ".then(delegate void(Any _v) {\n";
+		acc ~= thenVis;
+		acc ~= "        });\n";
 		if (awaitWireCatch.length)
 		{
-			acc ~= "      " ~ awaitWireJob ~ ".error(delegate void(Any _e) {\n";
-			acc ~= vis(awaitWirePend, "await_pending", "false");
-			acc ~= vis(awaitWireThen, "await_then", "false");
-			acc ~= vis(awaitWireCatch, "await_catch", "true");
-			acc ~= "      });\n";
+			acc ~= "        " ~ awaitWireJob ~ ".error(delegate void(Any _e) {\n";
+			acc ~= catchVis;
+			acc ~= "        });\n";
 		}
+		acc ~= "      }\n";
 		acc ~= "    }\n  }\n";
 	}
 

@@ -7,7 +7,7 @@
 		"libdparse": "0.25.1",
 		"libhttp2": "1.0.1",
 		"memutils": "1.0.12",
-		"openssl": {"path":"../../../openssl"},
+		"openssl": "3.3.4",
 		"pegged": "0.4.9",
 		"vibe-0": "1.2.1"
 	}

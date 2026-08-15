@@ -9,7 +9,9 @@ const eventHandler = async (event: any) => {
   const handlers = event.currentTarget.wasmEvents[event.type];
   const cbs = handlers.cbs;
 
-  cbs.forEach(async (cb: any) => {
+  // One in-flight Asyncify unwind. forEach(async) overlapped two
+  // wrapExportFn runs and corrupted asyncify_get_state.
+  for (const cb of cbs) {
     let idx = libwasm.addObject(event);
     try {
       await libwasm.instance.exports.domEvent(cb.ctx, cb.fun, idx);
@@ -18,15 +20,20 @@ const eventHandler = async (event: any) => {
         typeof WebAssembly !== 'undefined' &&
         typeof (WebAssembly as any).Exception === 'function' &&
         e instanceof (WebAssembly as any).Exception;
+      const rewrite =
+        typeof (window as any).__svelteDRewriteError === 'function'
+          ? (window as any).__svelteDRewriteError(e)
+          : e;
       console.error(
         'domEvent failed (',
         wasmEx ? 'WebAssembly.Exception' : libwasm.lastExceptionMsg,
         ')',
+        rewrite,
         libwasm.objects[idx]
       );
       libwasm.removeObject(idx);
     }
-  });
+  }
 };
 export let jsExports = {
   env: {

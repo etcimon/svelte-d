@@ -1,11 +1,11 @@
 ---
 title: "{#await}, {#key}, svelte:boundary"
-description: Await is JsPromise.then after render, never .await. Boundary is @visible body/failed. throwBoundary is same-function try/catch.
+description: Await is .await after render when the fork asyncified the module, else JsPromise.then. Boundary is @visible body/failed. throwBoundary is same-function try/catch.
 ---
 
 # `{#await}`, `{#key}`, `<svelte:boundary>`
 
-These three constructs look like control flow and they are the ones that interact with **time**. Time is where the two wasm cells used to diverge: asyncify wanted `.await`, wasm-eh wants `try_table`. The default engine cell is wasm-eh. Everything on this page is written so that a landing pad and `libwasm_await__void` never share a function.
+These three constructs look like control flow and they are the ones that interact with **time**. Time is where wasm-eh `try_table` and Binaryen asyncify used to be mutually exclusive. The default engine cell is still wasm-eh. The **etcimon/binaryen** fork (`binaryen/`, branch `svelte-d`) can `--asyncify` that `try_table` module, so `{#await}` now prints `.await` — but a landing pad and `libwasm_await__void` still **never share a try/catch**. Catching a rejected promise happens *after* rewind.
 
 ## `{#await}`
 
@@ -19,9 +19,11 @@ These three constructs look like control flow and they are the ones that interac
 {/await}
 ```
 
-Pending, then, and catch are three `@visible` children of the owner. Then `{v}` is `@prop` named after the binding. The host field is a `JsPromise`. It starts pending. `App.ready` — after `render`, with live handles — calls `wireAwait`, which attaches `job.then` / `.error`. Wiring in `construct` was too early, the same class of bug as `wireEach`. `this.update.await_then` still settles (Combo Go) for the case where you want to flip without a real promise. No job at all: settle to `{:then}` at print time (G87). `{#await job then v}` (no pending block) is the same IR with no pending child.
+Pending, then, and catch are three `@visible` children of the owner. Then `{v}` is `@prop` named after the binding. The host field is a `JsPromise`. It starts pending. `App.ready` — after `render`, with live handles — calls `wireAwait`. Wiring in `construct` was too early, the same class of bug as `wireEach`.
 
-**Never print `.await`.** Binaryen 132 Flatten cannot asyncify a `try_table` module. A function that both catches and awaits is asking those two worlds to share a frame. Use `JsPromise.then`. If you need the 1.36/1.42 asyncify cell, that is a named alternate config, not the default, and it does not do D `catch`.
+`wireAwait` asks JS whether the ship module exported `asyncify_get_state`. If it did (fork `wasm-opt --asyncify`), it calls `job.await`. That import always resumes; a JS reject is recorded on the host and D reads `libwasmAwaitFailed()` **after** the import returns. Then it flips the same `@visible` flags the old `.then` / `.error` pair flipped. If the module is not asyncified (stock Binaryen 123/132), `wireAwait` falls back to `JsPromise.then` / `.error` so the page still settles. `this.update.await_then` still settles (Combo Go) when you want to flip without a real promise. No job at all: settle to `{:then}` at print time (G87). `{#await job then v}` (no pending block) is the same IR with no pending child.
+
+**Do not wrap `.await` in `try/catch`.** Rewind re-enters the export from the top; landing-pad state is not part of Asyncify. `{#await}` catch is Svelte visibility, not a D exception crossing the import. A D `throw`/`catch` that should run after a failed await belongs in a **different** function, or after the await point without wrapping the import. `throwBoundary` stays same-function `try`/`catch` and still must not mention `.await`.
 
 ## `{#key}`
 

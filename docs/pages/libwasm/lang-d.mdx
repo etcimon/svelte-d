@@ -79,7 +79,7 @@ The markup becomes the graph `compile!()` walks. The `<section>` is `mixin NodeD
 |---|---|
 | `import vibe.*` | host cell |
 | npm `import` | `lang=ts` + Vite, or `Eval("window.$")` |
-| `.await` | asyncify cell; this module is wasm-eh |
+| `.await` inside `try/catch` | landing pad and `libwasm_await__void` cannot share a try |
 | `std.file` / `std.stdio` / `std.socket` | not wasm Phobos here |
 | `new Date` | `moment(...)` |
 | `_.map` as `{#each}` | `{#each}` is `UnorderedList` |

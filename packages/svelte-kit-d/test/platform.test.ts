@@ -2,11 +2,26 @@
 // SPDX-License-Identifier: MIT
 import { describe, expect, test } from 'bun:test'
 import {
+  DEFAULT_BINARYEN_VERSION,
   DEFAULT_LDC_VERSION,
+  MIN_WASM_OPT_VERSION,
+  WASM_EH_FEATURES,
+  binaryenDownloadUrl,
+  binaryenVariant,
+  binaryenBuildVariant,
+  findBinaryenSource,
+  findBinaryenBuildRoot,
   findLdc,
+  findWasmOpt,
+  forkedWasmOptHome,
+  forkedWasmOptDownloadUrl,
   hostTriple,
+  DEFAULT_WASM_OPT_RELEASE,
+  isForkedWasmOpt,
   isLdc143Text,
+  isWasmOptNewText,
   ldcDownloadUrl,
+  parseWasmOptVersion,
 } from 'svelte-d'
 
 describe('cross-platform LDC 1.43 setup', () => {
@@ -54,5 +69,58 @@ describe('cross-platform LDC 1.43 setup', () => {
     const ldc = findLdc()
     if (!ldc) return
     expect(ldc.toLowerCase()).not.toMatch(/ldc2-1\.42/)
+  })
+})
+
+describe('Binaryen ≥123 wasm-opt (try_table parse, no asyncify)', () => {
+  test('parseWasmOptVersion reads Binaryen banners and rejects apt 108', () => {
+    expect(parseWasmOptVersion('wasm-opt version 123 (version_123)')).toBe(123)
+    expect(parseWasmOptVersion('wasm-opt version 132 (version_132)')).toBe(132)
+    expect(parseWasmOptVersion('wasm-opt version 108')).toBe(108)
+    expect(isWasmOptNewText('wasm-opt version 123 (version_123)')).toBe(true)
+    expect(isWasmOptNewText('wasm-opt version 108')).toBe(false)
+    expect(MIN_WASM_OPT_VERSION).toBe(123)
+    expect(DEFAULT_BINARYEN_VERSION).toMatch(/version_12/)
+  })
+
+  test('official Binaryen URL uses the host variant', () => {
+    expect(binaryenVariant('win32', 'x64')).toBe('x86_64-windows')
+    expect(binaryenVariant('linux', 'x64')).toBe('x86_64-linux')
+    expect(binaryenVariant('linux', 'arm64')).toBe('aarch64-linux')
+    expect(binaryenVariant('darwin', 'arm64')).toBe('arm64-macos')
+    expect(binaryenDownloadUrl('version_123', 'x86_64-windows')).toBe(
+      'https://github.com/WebAssembly/binaryen/releases/download/version_123/binaryen-version_123-x86_64-windows.tar.gz'
+    )
+    expect(WASM_EH_FEATURES).toContain('--enable-exception-handling')
+    expect(WASM_EH_FEATURES.join(' ')).not.toMatch(/asyncify/)
+  })
+
+  test('findWasmOpt is empty or ≥123', () => {
+    const bin = findWasmOpt()
+    if (!bin) return
+    expect(bin.toLowerCase()).toMatch(/wasm-opt/)
+  })
+
+  test('findBinaryenSource sees the svelte-d submodule', () => {
+    const src = findBinaryenSource()
+    if (!src) return
+    expect(src.replace(/\\/g, '/')).toMatch(/binaryen$/)
+    expect(isForkedWasmOpt(forkedWasmOptHome() + '/bin/wasm-opt')).toBe(true)
+    expect(isForkedWasmOpt('/usr/bin/wasm-opt')).toBe(false)
+  })
+
+  test('forked wasm-opt CI assets live under binaryen-build/<triple>', () => {
+    expect(binaryenBuildVariant('win32', 'x64')).toBe('windows-x86_64')
+    expect(binaryenBuildVariant('linux', 'x64')).toBe('linux-x86_64')
+    expect(binaryenBuildVariant('linux', 'arm64')).toBe('linux-aarch64')
+    expect(binaryenBuildVariant('darwin', 'arm64')).toBe('darwin-arm64')
+    expect(binaryenBuildVariant('darwin', 'x64')).toBe('darwin-x86_64')
+    expect(forkedWasmOptDownloadUrl('linux-x86_64')).toBe(
+      'https://github.com/etcimon/svelte-d/releases/download/wasm-opt-svelte-d/wasm-opt-linux-x86_64.tar.gz'
+    )
+    expect(DEFAULT_WASM_OPT_RELEASE).toBe('wasm-opt-svelte-d')
+    expect(isForkedWasmOpt('/tmp/binaryen-build/linux-x86_64/wasm-opt')).toBe(true)
+    const root = findBinaryenBuildRoot()
+    if (root) expect(root.replace(/\\/g, '/')).toMatch(/binaryen-build$/)
   })
 })

@@ -8,6 +8,13 @@ import {
   createCppExceptionTag,
 } from './error-handling';
 import { attachSvelteDPopstate, installSvelteDDebug } from './debug-bridge';
+import {
+  clearLastAwait,
+  getLastAwait,
+  isAsyncifiedExports,
+  recordAwaitFail,
+  recordAwaitOk,
+} from './await-status';
 
 const abort = (what: string, file: string, line: number, msg: string) => {
   const fmt = (window as any).__svelteDFormatAbort;
@@ -68,6 +75,13 @@ const libwasm: any = {
   lastPromisePtr: 65536,
   instance: null,
   lastExceptionMsg: null,
+  lastAwaitError: null,
+  get awaitSupported() {
+    return isAsyncifiedExports(libwasm.instance && libwasm.instance.exports);
+  },
+  get lastAwait() {
+    return getLastAwait();
+  },
   init: async (modules: any, cb: any = null) => {
     (window as any).libwasm = libwasm;
     (window as any).libwasm.modules = modules;
@@ -113,7 +127,8 @@ const libwasm: any = {
         let fct = libwasm.nativeFunctionMap[fct_name];
         if (fct && fct.fun) {
           let handle = addObject(val);
-          // Must await: jsCallback is an Asyncify-wrapped export on 1.36/1.42.
+          // Must await: jsCallback is an Asyncify-wrapped export.
+          // Overlapping callbacks are serialized in wrapExportFn.
           await libwasm.instance.exports.jsCallback(fct.ctx, fct.fun, handle);
         } else console.error(`Function ${fct_name} is not registered.`);
       };
@@ -352,25 +367,45 @@ let jsExports = {
     libwasm_get__string: (rawResult: number, ptr: number) => {
       encoders.string(rawResult, getObject(ptr));
     },
+    libwasm_await_supported: () => {
+      return isAsyncifiedExports(libwasm.instance && libwasm.instance.exports)
+        ? 1
+        : 0;
+    },
+    libwasm_await_failed: () => {
+      return getLastAwait().failed ? 1 : 0;
+    },
     libwasm_await__void: async (handle: number) => {
       const ex = libwasm.instance && libwasm.instance.exports;
-      if (!ex || typeof ex.asyncify_get_state !== 'function') {
-        // wasm-eh default cell copies raw wasm. Without Binaryen Asyncify
-        // this import returns immediately and D continues — a silent no-op.
+      if (!isAsyncifiedExports(ex)) {
+        // Stock Binaryen 123/132 cannot --asyncify try_table. wireAwait
+        // checks libwasm_await_supported and falls back to JsPromise.then.
+        // A bare `.await` here would be a silent no-op.
         console.error(
           'libwasm_await__void: module is not asyncified; .await does not wait. ' +
-            'Binaryen 132 Flatten.cpp cannot --asyncify try_table. ' +
-            'Use JsPromise.then on the wasm-eh cell, or build ldc-1.36 / ldc-1.42.'
+            'Use the etcimon/binaryen fork (binaryen-svelte-d) or JsPromise.then.'
         );
+        clearLastAwait();
         return;
       }
+      clearLastAwait();
       let promise = getObject(handle);
-      // finally(): always resume D (ScopedPool dtors). Rejection is not a
-      // D exception — catch around .await cannot see JS failure (see
-      // AGENTS-D-IR-asyncify-wasm-eh.md).
-      return new Promise((resolve) => {
-        promise.finally(() => resolve(null));
-      });
+      if (!promise || typeof promise.then !== 'function') {
+        recordAwaitOk();
+        return null;
+      }
+      // Always resolve so wrapExportFn rewinds. Rejection is recorded for
+      // D libwasmAwaitFailed() *after* the import — never thrown across it.
+      try {
+        const value = await promise;
+        recordAwaitOk();
+        return value ?? null;
+      } catch (e) {
+        const s = recordAwaitFail(e);
+        libwasm.lastExceptionMsg = s.reason;
+        libwasm.lastAwaitError = s.reason;
+        return null;
+      }
     },
     libwasm_removeObject: (ptr: number) => {
       if (objects[ptr] === undefined) return;

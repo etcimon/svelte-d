@@ -17,9 +17,12 @@ stringImportPaths "src-d-views"
 buildRequirements "allowWarnings"
 
 # Default: LDC master / 1.43 + runtime-v1.43.0 (wasm EH).
-# Binaryen 132 --asyncify crashes Flatten.cpp on try_table — ship the raw
-# module as svelte-engine.wasm. TS instantiate() skips Asyncify when the
-# module has no asyncify_get_state.
+# Binaryen ≥123 parses try_table. svelte-d wasm runs wasm-opt -Oz / -g -O0
+# with --enable-exception-handling. The etcimon/binaryen fork (submodule
+# binaryen/, branch svelte-d) also --asyncify so EH probes and
+# throwBoundary stay live on the ship module. Stock 123/132 still
+# Flatten-crash; those stay -Oz only. Landing pad and .await stay in
+# different functions. TS instantiate() wraps when asyncify_get_state exists.
 configuration "application" {
     targetType "executable"
     dflags "-link-internally" "-defaultlib=" "--foptimize-nothrow=false" "-disable-linker-strip-dead"

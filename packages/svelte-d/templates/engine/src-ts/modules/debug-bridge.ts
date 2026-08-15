@@ -58,6 +58,26 @@ function rewriteWasmNames(
   return out
 }
 
+/** Tag asyncify / wasm-function frames. Never invents an orig line. */
+function rewriteAsyncFrames(text: string): string {
+  return text
+    .replace(/\bwasm-function\[(\d+)\]/g, (all) =>
+      all.includes('[async-wasm]') ? all : `${all} [async-wasm]`
+    )
+    .replace(/\basyncify_(?:start|stop)_(?:un)?wind\b/g, (all) =>
+      all.includes('[asyncify]') ? all : `${all} [asyncify]`
+    )
+}
+
+export function rewriteErrorStack(err: unknown, rewrite: (s: string) => string): string {
+  if (err == null) return ''
+  const stack =
+    typeof err === 'object' && err && 'stack' in err && (err as { stack?: unknown }).stack
+      ? String((err as { stack: unknown }).stack)
+      : String(err)
+  return rewrite(rewriteAsyncFrames(stack))
+}
+
 export async function installSvelteDDebug(): Promise<void> {
   let entries: Entry[] = []
   let wasmNames: { name: string; orig: string; origLine: number; kind: string }[] = []
@@ -81,10 +101,25 @@ export async function installSvelteDDebug(): Promise<void> {
   } catch {
     /* names optional until ensureWasm */
   }
-  const rewrite = (s: string) => rewriteWasmNames(wasmNames, rewriteText(entries, String(s)))
+  const rewrite = (s: string) =>
+    rewriteWasmNames(wasmNames, rewriteAsyncFrames(rewriteText(entries, String(s))))
   window.__svelteDDebugMap = entries
   window.__svelteDWasmNames = wasmNames
   window.__svelteDRewrite = rewrite
+  window.__svelteDRewriteError = (err: unknown) => rewriteErrorStack(err, rewrite)
+  window.__svelteDLastAwait = window.__svelteDLastAwait || {
+    failed: false,
+    reason: '',
+    exportName: '',
+  }
+  window.__svelteDNoteAwait = (s: { failed?: boolean; reason?: string; exportName?: string }) => {
+    window.__svelteDLastAwait = s
+    if (s && s.failed) {
+      const r = rewrite(String(s.reason || 'await failed'))
+      window.__svelteDLastFaults.push(r)
+      console.error('await-failed', r)
+    }
+  }
   window.__svelteDLastFaults = Array.isArray(window.__svelteDLastFaults)
     ? window.__svelteDLastFaults
     : []

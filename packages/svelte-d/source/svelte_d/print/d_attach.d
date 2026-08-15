@@ -287,9 +287,10 @@ void assembleAppChildren(string ws, string[] dests)
 	assembleAwaitReady(ws, dests);
 }
 
-/// After render, Spa calls App.ready. Hook `{#await}` `.then` and
-/// `{#each}{#if alias.field}` sync there so setVisible / unmount see
-/// live handles (onMount during _start does not).
+/// After render, Spa calls App.ready. Hook `{#await}` `.await` (fork
+/// asyncify) or `.then` fallback, and `{#each}{#if alias.field}` sync
+/// there so setVisible / unmount see live handles (onMount during
+/// _start does not).
 void assembleAwaitReady(string ws, string[] dests)
 {
 	auto path = buildPath(ws, "src-d", "app.d");

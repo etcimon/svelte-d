@@ -72,6 +72,13 @@ describe('kit-admin compile: IR, debug-map, vibe.0 PG/Redis/JSON', () => {
     expect(user).toContain('await_then')
     expect(user).toContain('await_catch')
 
+    const cover = readFileSync(join(ws, 'src-d', 'lib', 'ComboCover.d'), 'utf8')
+    expect(cover).toContain('void wireAwait()')
+    expect(cover).toContain('libwasmAwaitSupported()')
+    expect(cover).toMatch(/job\.await/)
+    expect(cover).toContain('libwasmAwaitFailed()')
+    expect(cover).toContain('.then(delegate void(Any _v)')
+
     const feat = readFileSync(join(ws, 'src-d', 'routes', 'admin', 'features', 'page.d'), 'utf8')
     expect(feat).toContain('import lib.ClickField')
     expect(feat).toContain('import lib.Panel')

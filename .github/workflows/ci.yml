@@ -17,8 +17,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          submodules: recursive
+
+      - name: svelte-engine submodule
+        run: git submodule update --init svelte-engine
 
       - name: Bun
         uses: oven-sh/setup-bun@v2

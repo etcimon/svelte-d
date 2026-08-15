@@ -26,6 +26,21 @@ export function isWasmException(e: unknown): boolean {
   );
 }
 
+/** Stringify a wasm-eh throw or a JS reject for DevTools / lastAwait. */
+export function formatHostError(e: unknown): string {
+  if (isWasmException(e)) return 'WebAssembly.Exception';
+  if (e == null) return '';
+  if (typeof e === 'string') return e;
+  const err = e as { message?: unknown; stack?: unknown };
+  if (err && typeof err.stack === 'string' && err.stack.length) return err.stack;
+  if (err && typeof err.message === 'string') return err.message;
+  try {
+    return String(e);
+  } catch {
+    return 'error';
+  }
+}
+
 export function installErrorHandling(
   env: Record<string, any>,
   decode: StringDecoder,

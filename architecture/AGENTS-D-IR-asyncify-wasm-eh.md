@@ -1,23 +1,24 @@
-# D IR yield — asyncify, wasm-eh, and why they do not compose
+# D IR yield — wasm-eh with Binaryen ≥123, and how await composes after the fork
 
-The next change that prints `.await` on the default wasm-eh cell, runs `wasm-opt --asyncify` on a `try_table` module, or puts `try`/`catch` in the same function as `libwasm_await__void` should read this and then **split the two yields**.
+The next change that wraps `.await` in `try/catch`, or runs official (non-fork) `wasm-opt --asyncify` on a `try_table` module, should read this and then **keep the two yields disjoint**.
 
-**Guiding construction:** libwasm has two pause/resume stories. **wasm-eh** is LDC’s `try`/`catch` (`llvm_wasm_throw` + `try_table`/`catch_ref`). **asyncify** is Binaryen rewriting the module so `env.libwasm_await__void` can unwind the wasm stack into linear memory and rewind when a JS Promise settles. They are **not** the same mechanism. On this workspace they **must not share a function, and on Binaryen 132 they must not share a module**. Printed D IR follows the **cell**:
+**Guiding construction:** libwasm has two pause/resume stories. **wasm-eh** is LDC’s `try`/`catch` (`llvm_wasm_throw` + `try_table`/`catch_ref`). **asyncify** is Binaryen rewriting the module so `env.libwasm_await__void` can unwind the wasm stack into linear memory and rewind when a JS Promise settles. They are **not** the same mechanism. Binaryen **≥123 parses `try_table`** (Ubuntu apt 108 cannot). Official Flatten `--asyncify` is still **UNREACHABLE** on `try_table` in 123 **and** 132. The **etcimon/binaryen** fork Flattens `try_table` and asyncifies the wasm-eh module. They still **must not share a try** (rewind is not a landing pad). Printed D IR follows the **cell**:
 
 | Cell | LDC | Post-link | `.await` | D `try`/`catch` |
 |---|---|---|---|---|
-| `ldc-master` / `application` (default) | 1.43 + `--wasm-enable-eh` | **copy-raw** (no `wasm-opt --asyncify`) | **forbidden** (silent no-op if printed) | **yes** (`rt/eh.d`) |
+| `ldc-master` / `application` (default) | 1.43 + `--wasm-enable-eh` | **fork** `--asyncify` then `-Oz`; stock 123/132 `-Oz` only | **off landing-pad functions** | **yes** (`rt/eh.d`, throwBoundary) |
 | `ldc-1.42` | 1.42 + `--wasm-enable-eh` (abort-on-throw) | `wasm-opt --asyncify` + bulk-memory | **yes** | **no** (JS `captureException` abort) |
 | `ldc-1.36` | 1.36 + `--wasm-enable-eh` (abort-on-throw) | `wasm-opt --asyncify` | **yes** | **no** (same abort) |
 
-Svelte `async` / `{#await}` stay out of v1. Kit `load` that must wait uses `.then` on wasm-eh, or the 1.36/1.42 cell.
+Svelte `async` stays out of v1. `{#await}` prints `wireAwait` (`.await` + flag, or `.then` on stock Binaryen). Kit `load` that must wait uses the same `JsPromise` handle.
 
 ```
 D  try { throw e; } catch (Exception e) { … }
      LDC 1.43  --wasm-enable-eh -mattr=+exception-handling
      →  llvm_wasm_throw → try_table / catch_ref
      →  _d_throw_exception / _Unwind_CallPersonality / _d_eh_enter_catch
-     Binaryen Flatten  →  UNREACHABLE on try_table   (do not asyncify)
+     Binaryen ≥123     →  parses try_table; -Oz / -g -O0
+     Binaryen Flatten  →  UNREACHABLE on try_table   (do not --asyncify)
 
 D  promise.await;
      types.d:926  →  import env.libwasm_await__void
@@ -46,7 +47,7 @@ Asyncify is **not** an LDC flag. `postBuildCommands` run Binaryen `wasm-opt --as
 2. Runs **Flatten** so each function is a shape Asyncify can split at the import.
 3. Instruments unwind/rewind (`asyncify_start_unwind`, `asyncify_start_rewind`, …).
 
-**Flatten does not support wasm Exception Handling.** Binaryen 132 hits `UNREACHABLE` in `Flatten.cpp` on `try_table` (same family as [binaryen#4470](https://github.com/WebAssembly/binaryen/issues/4470) Asyncify+Try, [binaryen#8372](https://github.com/WebAssembly/binaryen/issues/8372) Flatten/`try_table`). The post-build **never produces** `svelte-engine.wasm`. That is why the default cell **copies raw** (`svelte-engine/dub.sdl:21-28`).
+**Flatten does not support wasm Exception Handling.** Binaryen 123 and 132 both parse `try_table` with `--enable-exception-handling` (that is the official `-Oz` ship path). Both still hit `UNREACHABLE` in `Flatten.cpp` on `--asyncify` (same family as [binaryen#4470](https://github.com/WebAssembly/binaryen/issues/4470) Asyncify+Try, [binaryen#8372](https://github.com/WebAssembly/binaryen/issues/8372) Flatten/`try_table`). `asyncify-remove-list` of EH symbols and `asyncify-only-list` of leaf exports still Flatten-crash. That is why the default cell **never passes `--asyncify`**. `dub.sdl` still copies raw; `svelte-d wasm` then runs `wasm-opt -Oz` (release) or `-g -O0` (debug).
 
 Even if Flatten learned `try_table`, **catch across `.await` is still unsound**:
 
@@ -57,45 +58,49 @@ Even if Flatten learned `try_table`, **catch across `.await` is still unsound**:
 
 So the correction is **not** “turn on both flags.” It is: **keep EH CFGs and asyncify CFGs disjoint**, and do not Flatten `try_table` until Binaryen can.
 
-### Possible Binaryen workaround (unverified on this host)
+### Official post-link (measured 2026-08-15)
 
-`wasm-opt` is not on PATH here. If a later Binaryen Flatten is still whole-module, remove-list cannot save a 1.43 module. If Flatten is only applied to the instrumented set, a titled libwasm/engine experiment is:
+`findWasmOpt` requires Binaryen **≥123**. Ubuntu apt 108 cannot parse `try_table`. `bunx svelte-d setup` downloads `version_123` into `~/.svelte-d/toolchains`. The Flatten-`try_table` work lives in the **etcimon/binaryen** submodule (`binaryen/`, branch `svelte-d`); `bun run build-wasm-opt` installs it as `~/.svelte-d/toolchains/binaryen-svelte-d`. Author trees may already have stock 132 under `riscv-dev/toolchains/` — that binary still Flatten-crashes on `--asyncify`.
 
 ```text
-wasm-opt --enable-exception-handling --asyncify
-  --pass-arg=asyncify-imports@env.libwasm_await__void
-  --pass-arg=asyncify-remove-list@_d_throw_exception,_Unwind_CallPersonality,_d_eh_enter_catch,__gxx_wasm_personality_v0,spa_eh_probe,probeCatch
+# release (kit-admin: 1.59 MiB LDC+strip → 0.93 MiB / 224 KB gzip; 971,820 / 223,909)
+wasm-opt -Oz --converge --strip-debug --strip-dwarf --strip-producers
+  --enable-exception-handling --enable-bulk-memory --enable-bulk-memory-opt
+  --enable-reference-types --enable-multivalue
+  --enable-nontrapping-float-to-int --enable-sign-ext
+  svelte-engine-raw.wasm -o svelte-engine.wasm
+
+# debug (keep DWARF / name section)
+wasm-opt -g -O0 --enable-exception-handling …same features…
 ```
 
-plus the **printer rule**: a function that `throw`s/`catch`es must not reach `.await` (directly or by inlining). That is the only in-tree path toward one module with both. Do not claim it works until `spa-wasm-eh` + a tiny `.await` helper **both** pass after that `wasm-opt`.
+Official 123/132 still do **not** put `--asyncify` on that line. The etcimon fork does, then `-Oz`. Flatten+asyncify on `try_table` is **green** on the fork (catch_all and valued dest at `--optimize-level=0`; kit-admin raw asyncifies). The printer rule stays: a function that `throw`s/`catch`es must not **wrap** `.await`.
 
 ## libwasm implementation bugs (the glue, not Flatten)
 
-These are in **libwasm’s** await/asyncify implementation and the engine copies. They make wasm-eh + `.await` look like it works when it does not.
+These were in **libwasm’s** await/asyncify implementation and the engine copies. Engine `src-ts/modules/` now implements the sound path. libwasm `examples/dom-ts` and `types.d` remain a **titled libwasm seam**.
 
-1. **`.await` is a silent no-op without Asyncify.** `await()` (`types.d:926-928`) always imports `libwasm_await__void`. JS implements it as `async` (`svelte-engine/src-ts/modules/libwasm.ts:343-348`). Without Binaryen instrumentation the import returns immediately; the Promise is dropped. Default wasm-eh cell uses `instantiate()` which **skips** the Asyncify wrapper when `asyncify_get_state` is absent (`asyncify.ts:217-219`). Printed `.await` on that cell **does not wait**.
+1. **`.await` is a silent no-op without Asyncify.** `await()` still imports `libwasm_await__void`. Without Binaryen instrumentation the import returns immediately. **Fix:** printed `wireAwait` calls `libwasmAwaitSupported()` (JS `asyncify_get_state`) and falls back to `JsPromise.then`. A bare `.await` on stock 123/132 is still a no-op.
 
-2. **`finally` swallows rejection.** `libwasm_await__void` does `promise.finally(() => resolve(null))`. D `await()` is `void`. A failed fetch never becomes a D exception, so a wasm-eh `catch` around `.await` **cannot** observe JS failure. `finally` exists so rewind always happens (otherwise `ScopedPool` dtors never run). That is why catch-around-await cannot be the error path.
+2. **`finally` swallowed rejection.** Old JS did `promise.finally(() => resolve(null))` so D never saw fail. **Fix:** record reject on `await-status.ts` (`libwasmAwaitFailed` / `__svelteDLastAwait`) and still resolve so rewind happens. D settles `{:catch}` *after* the import. `wrapExportFn` also rewinds if the Promise it awaits rejects.
 
-3. **`_start` is not an Asyncify-wrapped export.** `EXPORTED_FROM_D` is `domEvent`, `jsCallback0`, `jsCallback`, `loadApp`, `dumpApp` — not `_start`. `libwasm.ts:129` calls `_start` raw. `App.construct` / `ready` / default `navigateTo` that `.await` would unwind and never rewind.
+3. **`_start` must be wrapped.** `EXPORTED_FROM_D` includes `_start` so `ready` → `wireAwait` → `.await` rewinds.
 
-4. **`wrapExportFn` replaces `WebAssembly.Exception` with a generic `Error`.** A D throw that escapes an asyncified `domEvent` loses the wasm EH identity the host (`spa.ts:17-21`) already knows how to detect.
+4. **`wrapExportFn` must keep `WebAssembly.Exception`.** It rethrows the original. `__svelteDRewriteError` only rewrites the *text* for DevTools.
 
-5. **`callNative` does not `await jsCallback`.** `spa.ts` correctly `await`s `domEvent`. `libwasm.ts:106-109` fires `jsCallback` without awaiting, so a `lang=ts` → D callback that `.await`s never rewinds.
+5. **`callNative` must `await jsCallback`.** Done. Overlapping exports are queued (one unwind).
 
-6. **`eventHandler` `forEach(async …)` is re-entrant.** Asyncify has one state. Two overlapping `domEvent`s corrupt unwind. Construction: one in-flight await per module.
+6. **`eventHandler` must not `forEach(async)`.** Serial `for` + `await domEvent`.
 
-7. **Promise handles skip the freelist** (`libwasm_removeObject`: `if (!(objects[ptr] instanceof Promise))`). Convention leak, not EH.
-
-Engine copies of (1)–(5) are corrected in `svelte-engine/src-ts/modules/` (this pass). libwasm `examples/dom-ts` and `types.d` remain a **titled libwasm seam**.
+7. **Promise handles skip the freelist** (`libwasm_removeObject`). Convention leak, not EH.
 
 ## What svelte-d must print (functionally memory- and yield-correct D IR)
 
-- **wasm-eh cell (default):** `JsPromise.then` / `.error` / `.finish`. No `.await`. Sync D `try`/`catch` only in functions that never reach an async import (navbar `onClick` is the golden).
-- **asyncify cells (1.36 / 1.42):** `.await` allowed in `@connect` / `onMount` / `ready` **without** a landing pad in that function. Wrap with `ScopedPool`; copy survivors before the await returns ([AGENTS-D-IR-memory-management.md](AGENTS-D-IR-memory-management.md), [AGENTS-D-IR-lifetime.md](AGENTS-D-IR-lifetime.md)).
-- Never print `.await` in `construct` / `compile!` / `_start` / `registerRoutes`.
-- Never print Svelte `async` / `{#await}` (v1 out of scope).
-- Generated `dub.sdl` must not emit `--asyncify` on `ldc-master` / `application`. Must emit `--foptimize-nothrow=false` on that cell.
+- **wasm-eh cell (default):** `wireAwait` prints `job.await` plus `libwasmAwaitFailed()` settle when asyncify is present; else `JsPromise.then` / `.error`. Sync D `try`/`catch` / `throwBoundary` in functions that never reach `libwasm_await__void` (navbar `onClick`, printed `throwBoundary`). The etcimon/binaryen fork asyncifies the **module** so those catches still run (`svelte_engine_eh_probe` == 1). Do not wrap `.await` in `try`.
+- **asyncify cells (1.36 / 1.42):** `.await` allowed in `@connect` / `onMount` / `ready` **without** a landing pad around the import. Wrap with `ScopedPool`; copy survivors before the await returns ([AGENTS-D-IR-memory-management.md](AGENTS-D-IR-memory-management.md), [AGENTS-D-IR-lifetime.md](AGENTS-D-IR-lifetime.md)).
+- Never print `.await` in `construct` / `compile!` / `_start` / `registerRoutes` / `throwBoundary`.
+- Never print Svelte `async` (v1 out of scope). `{#await}` *is* printed as `wireAwait`.
+- Generated `dub.sdl` must not emit `--asyncify` on `ldc-master` / `application` (svelte-d wasm does that when the fork is installed). Must emit `--foptimize-nothrow=false` on that cell.
 
 ## Loci
 
@@ -105,26 +110,28 @@ Engine copies of (1)–(5) are corrected in `svelte-engine/src-ts/modules/` (thi
 `libwasm/architecture/{flags,js-events-memory,wasm-eh-test}.md`  
 `libwasm/tests/spa-wasm-eh/` — catch probe; **no** asyncify  
 `libwasm/examples/dom-ts/src-d/app.d:102-129` — `.await` under `nothrow` (1.36-shaped)  
-`svelte-engine/dub.sdl:20-66` — copy-raw vs `--asyncify` per cell  
-`svelte-engine/src-ts/modules/asyncify.ts` — `DATA_*`, `EXPORTED_FROM_D`, skip if no `asyncify_get_state`  
-`svelte-engine/src-ts/modules/libwasm.ts` — `_start`, `libwasm_await__void`, `callNative`  
+`svelte-engine/dub.sdl:20-66` — copy-raw then svelte-d `wasm-opt` (no `--asyncify` on wasm-eh)  
+`svelte-engine/src-ts/modules/asyncify.ts` — `DATA_*`, `EXPORTED_FROM_D`, queue, rewind-on-reject  
+`svelte-engine/src-ts/modules/await-status.ts` — last-await flag  
+`svelte-engine/src-ts/modules/libwasm.ts` — `_start`, `libwasm_await__void` / `_supported` / `_failed`  
+`svelte-engine/src-d/await_status.d` — D view of those imports  
 `svelte-engine/src-d/navbar.d:25-35` — sync `try`/`catch` (wasm-eh golden)  
 Binaryen `src/passes/{Flatten.cpp,Asyncify.cpp}`; issues #4470, #8372  
 
 ## Invariants
 
-- Do not `wasm-opt --asyncify` a module that contains `try_table` on Binaryen 132. (construction)
+- Official 123/132: do not `--asyncify` `try_table` (Flatten UNREACHABLE). Fork `binaryen-svelte-d`: asyncify then `-Oz`. (construction)
 - wasm-eh cell keeps `--foptimize-nothrow=false` or D `catch` is deleted. (construction of 1.43)
-- `.await` is printed only when the **same** cell’s post-build actually asyncifies. (construction of the yield protocol)
-- A function with a landing pad must not reach `libwasm_await__void`. (construction of catch/asyncify disjointness)
+- Printed `.await` is gated by `libwasmAwaitSupported()`; stock modules keep `.then`. (construction of the yield protocol)
+- A function with a landing pad must not **wrap** `libwasm_await__void`. After rewind, same-function flag checks are fine. (construction of catch/asyncify disjointness)
 - `DATA_END` == `ldc2.conf` stack size. (convention)
-- New async imports append to `--asyncify-imports` **and** stay off the wasm-eh default cell. (construction)
-- One in-flight Asyncify unwind. (construction of `asyncify.ts` state)
+- New pausing imports append to `--asyncify-imports`. Status queries (`_supported` / `_failed`) are sync and stay off that list. (construction)
+- One in-flight Asyncify unwind (`wrapExportFn` queue). (construction of `asyncify.ts` state)
 
 ## Extension points
 
-A Binaryen that Flattens `try_table` is a toolchain bump + re-run of `spa-wasm-eh` **with** `--asyncify` and a `.await` helper. A libwasm seam that teaches `_d_newarray*` pools does not fix yield. JSPI (`WebAssembly.promising`) would replace Binaryen Asyncify; that is a new glue ABI, not a printer flag.
+JSPI (`WebAssembly.promising`) would replace Binaryen Asyncify; that is a new glue ABI, not a printer flag. Filling `{:catch e}` from `libwasmAwaitError()` is a later printer increment (catch alias is now parsed as `MkNode.catchName`).
 
 ## Did not close
 
-Whether `asyncify-remove-list` of EH symbols avoids Flatten on Binaryen 132 (unrun: `wasm-opt` not on PATH). Whether 1.43 can grow a **second** imported await that JSPI wraps while EH stays native. Whether `ExceptionHeader` should be a stack, not a single `__gshared` slot, before any catch-across-await experiment.
+`asyncify-remove-list` of EH symbols and `asyncify-only-list` of leaf exports still Flatten-crash on Binaryen 123 and 132 (measured). Whether a later Flatten that understands `try_table` lands, or 1.43 grows a **second** imported await that JSPI wraps while EH stays native. Whether `ExceptionHeader` should be a stack, not a single `__gshared` slot, before any catch-across-await experiment.

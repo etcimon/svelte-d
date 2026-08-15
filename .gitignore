@@ -4,6 +4,10 @@ svelte-engine-ws/
 **/.dub/
 **/node_modules/
 
+# CI / setup-placed wasm-opt triples (LICENSE + README stay)
+binaryen-build/*/
+binaryen-build/dist/
+
 # Built compiler
 packages/svelte-d/bin/
 packages/svelte-d/lib/

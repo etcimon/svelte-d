@@ -11,9 +11,14 @@ const report = await setupPlatform({ download })
 console.log('os      ', report.triple.os, report.triple.arch, report.triple.variant)
 console.log('ldc     ', report.ldc || '(missing)')
 console.log('dub     ', report.dub || '(missing)')
+console.log(
+  'wasm-opt',
+  report.wasmOpt ||
+    '(missing — bunx svelte-d setup downloads the fork wasm-opt into binaryen-build/)'
+)
 console.log('libwasm ', report.libwasm || '(dub fetch ~master on first wasm build)')
 console.log('vibe.0  ', report.vibe0 || '(dub registry vibe-0 on first host build)')
-if (report.downloaded) console.log('downloaded LDC 1.43 into ~/.svelte-d/toolchains')
+if (report.downloaded) console.log('downloaded toolchain into ~/.svelte-d/toolchains')
 if (!report.ok) {
   console.error(
     'svelte-d setup: LDC 1.43 + dub required. Retry with network, or set SVELTE_D_LDC.'

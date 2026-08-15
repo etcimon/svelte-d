@@ -6,7 +6,7 @@
 import { spawnSync } from 'node:child_process'
 import { copyFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join } from 'node:path'
-import { findLdc } from 'svelte-d'
+import { findLdc, optimizeWasm } from 'svelte-d'
 import {
   adminWorkspace,
   fileBytes,
@@ -133,6 +133,18 @@ export function buildWasmCell(mode: CellMode, ws = adminWorkspace(), force = tru
   const raw = join(pub, 'svelte-engine-raw.wasm')
   const ship = join(pub, 'svelte-engine.wasm')
   if (existsSync(raw)) copyFileSync(raw, ship)
+  if (existsSync(ship) || existsSync(raw)) {
+    const opt = optimizeWasm({
+      input: existsSync(raw) ? raw : ship,
+      output: ship,
+      mode,
+    })
+    if (opt.skipped) console.log('wasm-opt skip  ' + opt.reason)
+    else
+      console.log(
+        'wasm-opt ' + opt.reason + '  ' + opt.bytesIn + ' -> ' + opt.bytesOut
+      )
+  }
   const path = existsSync(ship) ? ship : existsSync(raw) ? raw : ''
   const bytes = fileBytes(path)
   return { mode, status: r.status, path, bytes, label: fmtBytes(bytes), stdout: r.out }
@@ -209,7 +221,7 @@ export function formatDualSizes(s: DualSizes): string {
   const lines = [
     'workspace ' + s.workspace,
     'wasm  debug    ' + s.wasm.debug.label,
-    'wasm  release  ' + s.wasm.release.label + '  (-strip-all)',
+    'wasm  release  ' + s.wasm.release.label + '  (-strip-all + wasm-opt -Oz)',
     'host  debug    ' + s.host.debug.label,
     'host  release  ' + s.host.release.label + '  (-strip-all)',
   ]

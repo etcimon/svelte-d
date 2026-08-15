@@ -34,7 +34,7 @@ Printed structs are `nothrow:`. LDC 1.43’s default `--foptimize-nothrow` **del
 
 svelte-d’s `throwBoundary` is same-function `try` / `throw` / `catch` on the same struct. Personality is first-catch-type only. An exception that crosses a function boundary is an abort, not a boundary. `std.conv.to` and friends belong inside that `try`. An uncaught throw is `_d_print_throwable` → `console.error`, then abort.
 
-Do not compose this module with Binaryen 132 Flatten `--asyncify`. Do not print `.await` on this cell. See [JsPromise](./async) and [wasm-eh](../advanced/wasm-eh).
+Binaryen ≥123 parses this `try_table` module and is the official `-Oz` post-link. Do not compose it with Flatten `--asyncify`. Do not print `.await` on this cell. See [JsPromise](./async) and [wasm-eh](../advanced/wasm-eh).
 
 ## CSS
 

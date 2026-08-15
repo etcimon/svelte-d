@@ -1,0 +1,119 @@
+name: wasm-opt
+
+# Compile the etcimon/binaryen (branch svelte-d) wasm-opt for
+# linux / macos / windows. setup downloads those assets into
+# binaryen-build/<triple>/ the same way it fetches LDC 1.43.
+
+on:
+  push:
+    branches: [master]
+    paths:
+      - 'binaryen/**'
+      - '.github/workflows/wasm-opt.yml'
+      - 'scripts/package-wasm-opt.ts'
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/wasm-opt.yml'
+      - 'scripts/package-wasm-opt.ts'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: wasm-opt ${{ matrix.variant }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            variant: linux-x86_64
+          - os: ubuntu-24.04-arm
+            variant: linux-aarch64
+          - os: macos-13
+            variant: darwin-x86_64
+          - os: macos-14
+            variant: darwin-arm64
+          - os: windows-latest
+            variant: windows-x86_64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Binaryen submodule
+        run: git submodule update --init --depth 1 binaryen
+
+      - name: Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: CMake
+        uses: lukka/get-cmake@latest
+
+      - name: Configure + build wasm-opt
+        shell: bash
+        run: |
+          set -euo pipefail
+          extra=()
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            extra+=(-A x64)
+          else
+            extra+=(-DCMAKE_BUILD_TYPE=Release)
+          fi
+          cmake -S binaryen -B binaryen-cmake \
+            -DENABLE_WERROR=OFF \
+            -DBUILD_TESTS=OFF \
+            -DBUILD_TOOLS=ON \
+            "${extra[@]}"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cmake --build binaryen-cmake --target wasm-opt --config Release
+          else
+            cmake --build binaryen-cmake --target wasm-opt -j "$(getconf _NPROCESSORS_ONLN)"
+          fi
+
+      - name: Package
+        shell: bash
+        run: bun scripts/package-wasm-opt.ts ${{ matrix.variant }}
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: wasm-opt-${{ matrix.variant }}
+          path: binaryen-build/dist/wasm-opt-${{ matrix.variant }}.tar.gz
+          if-no-files-found: error
+
+  publish:
+    name: Release wasm-opt-svelte-d
+    needs: build
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: false
+
+      - name: Flatten archives
+        run: |
+          mkdir -p release
+          find dist -name 'wasm-opt-*.tar.gz' -exec cp {} release/ \;
+          ls -la release
+
+      - name: Publish rolling release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          notes='Prebuilt wasm-opt from etcimon/binaryen branch svelte-d (Flatten + Asyncify on try_table).
+          bunx svelte-d setup downloads the matching triple into binaryen-build/<triple>/ and ~/.svelte-d/toolchains/binaryen-svelte-d.
+          Binaryen is Apache-2.0; each archive includes LICENSE.'
+          if gh release view wasm-opt-svelte-d >/dev/null 2>&1; then
+            gh release upload wasm-opt-svelte-d release/* --clobber
+          else
+            gh release create wasm-opt-svelte-d release/* \
+              --title 'wasm-opt (etcimon/binaryen svelte-d)' \
+              --notes "$notes"
+          fi

@@ -142,8 +142,8 @@ Do not put `lang="d"` into `src-ts/`. Do not put `lang="ts"` into `src-d/`. Do n
 | G89 | each else live | host `string[]` empty skips seed (`voids_empty=true` → `None`); `xs = []` → `shrinkTo` + `setVisible` Empty (LangCoverage Wipe) | `dom.test.ts` + `lang-features.test.ts` |
 | G90 | each else in ul | `<ul>{#each}{:else}` prints `ExtrasList`/`ItemsList` so Empty is a child of the `ul`, not a sibling | `dom.test.ts` + `lang-features.test.ts` |
 | G91 | boundary failed | `<svelte:boundary>` hides `{#snippet failed}` until `this.update.boundary_failed`; ComboMedia Trip/Reset | `dom.test.ts` + `lang-features.test.ts` |
-| G92 | await then | host `JsPromise` `{#await}` starts pending; `this.update.await_then` settles (Combo Go). No `.await` | `dom.test.ts` + `lang-features.test.ts` |
-| G93 | await ready | App `ready` calls `combo.wireAwait` after render so `job.then` `setVisible`s with live handles | `dom.test.ts` + `lang-features.test.ts` |
+| G92 | await then | host `JsPromise` `{#await}` starts pending; `wireAwait` uses `.await` + `libwasmAwaitFailed` (fork) or `.then` (stock); `this.update.await_then` still settles (Combo Go) | `dom.test.ts` + `lang-features.test.ts` + `await-asyncify.test.ts` |
+| G93 | await ready | App `ready` calls `combo.wireAwait` after render so settle `setVisible`s with live handles | `dom.test.ts` + `lang-features.test.ts` |
 | G94 | each-inner-if items | `{#each}{#if cond}<li>` unmounts each `li`, keeps the `ul` (`sync_items_on`) | `dom.test.ts` + `lang-features.test.ts` |
 | G95 | each-inner-if item field | `{#each rows as row}{#if row.ok}` — `bool ok` on the item; first seed true; `sync_rows_ok` / `fill_rows` | `dom.test.ts` + `lang-features.test.ts` |
 | G96 | boundary failed(error, reset) | `{#snippet failed(error, reset)}` + `onerror` → `failBoundary` / `resetBoundary`; Retry remounts Ok | `dom.test.ts` + `lang-features.test.ts` |
@@ -169,6 +169,8 @@ Do not put `lang="d"` into `src-ts/`. Do not put `lang="ts"` into `src-d/`. Do n
 | G116 | cover tables | `ComboCover` + `each-else` / `await` / `bind` tables (wipe Empty-in-ul, pending→then/catch, value/checked/open/group/files) | `dom.test.ts` + `lang-features.test.ts` |
 | G117 | surf tables | `ComboSurf` + `directive` / `special` / `boundary` tables (`class:`/`style:`/`once`/spread/`use:`, element/fragment/component/window, throwBoundary Retry) | `dom.test.ts` + `lang-features.test.ts` |
 | G118 | cmp leftovers | `!(n > 0)`, empty `{#each} zeds = []`, `n > lim` (item vs host) on `ComboIfCmp` | `dom.test.ts` + `lang-features.test.ts` |
+| G119 | await + fork EH | `wireAwait` prints `.await` + `libwasmAwaitFailed` (stock `.then` fallback); asyncify rewind-on-reject, export queue, `__svelteDRewriteError` | `await-asyncify.test.ts` + `wasm-eh.test.ts` + `admin.test.ts` |
+| G120 | wasm-opt CI | CI builds etcimon/binaryen wasm-opt for win/mac/linux; setup downloads into `binaryen-build/` like LDC 1.43; openssl 3.3.4 add-local for vibe-0 | `platform.test.ts` + `.github/workflows/wasm-opt.yml` |
 
 Recorded limits: Pegged `mixin(grammar)` stack-overflows (use `grammar/sveltekit.peg` as spec + runtime scan). Template `comfyapi.d` / `dmaxminddb` stubbed. 1.43 wasm has no asyncify.
 
@@ -186,7 +188,7 @@ svelte-d proceeds by **completing the libwasm D IR**, not by jumping to Pegged o
 | L3 | Pool-correct allocation (`ScopedPool`, copy-out, freeze) | G13 | documented; printer wrap in T3 |
 | L4 | `compile!` / Spa **lifetime methods** (`construct`, `onMount`, `onUnmount`, App `ready`) | G14 + G16 | printed |
 | L4c | `{#if ident}` → `@visible` + remount/unmount | G17 + G23 | printed; `{:else}` inverted `setVisible` |
-| L4b | Yield: wasm-eh `try`/`catch` **or** asyncify `.await`, never both in one function/module | G15 | printer: no `.await` on default cell |
+| L4b | Yield: wasm-eh `try`/`catch` must not **wrap** asyncify `.await`; after-rewind flag is OK | G15 | printer: `wireAwait` `.await` + fallback `.then` |
 | L5 | **Assemble** printed structs under one `mixin Spa!App` (`@child ClickField`, list `put` in `construct`) | G16 | markers on golden `app.d` |
 | L6 | Parse fidelity: Pegged `asModule` onto the **same** AST | G18–G19 | Document + MarkupDoc→MkNode; scan fallback if thin |
 | L7 | Kit tree: layouts stay mounted; page swap via `@entering` + remount | G52 | T5 |
@@ -233,7 +235,7 @@ Printer emits the libwasm D IR ([udas.md](architecture/udas.md), [AGENTS-D-IR-li
 - Do **not** print `App.ready()` unless the Svelte has first-load work (missing `ready` keeps default `navigateTo`).
 - Wrap heavy `@connect` / list-rebuild / Lodash bodies in `ScopedPool(m_pool)` and copy survivors ([AGENTS-D-IR-memory-management.md](architecture/AGENTS-D-IR-memory-management.md)).
 - `{#if}` → `setVisible` / `remount` / `unmount`, not a second struct type.
-- **Yield:** wasm-eh cell prints `JsPromise.then` / `.error`, never `.await`. A function with `try`/`catch` must not reach `libwasm_await__void`. Keep `--foptimize-nothrow=false` on that `dub.sdl`. See [AGENTS-D-IR-asyncify-wasm-eh.md](architecture/AGENTS-D-IR-asyncify-wasm-eh.md).
+- **Yield:** wasm-eh `wireAwait` prints `.await` + `libwasmAwaitFailed()` when the fork asyncified the module, else `JsPromise.then`. A `try` must not wrap the import. Keep `--foptimize-nothrow=false` on that `dub.sdl`. See [AGENTS-D-IR-asyncify-wasm-eh.md](architecture/AGENTS-D-IR-asyncify-wasm-eh.md).
 
 **T3-assemble (G16):**
 
@@ -317,7 +319,7 @@ Reprint-skip + opposite-cell-skip; G80 skips the relink when dests are unchanged
 - AST kinds are the libwasm D IR. Lodash/moment/bindings are sparse procedural. Printed names stay representative of the Svelte.
 - Printed wasm D is pool-correct: live `ScopedPool` precedes `alloc`/`_d_allocmemory`/`allocString`; copy or freeze before a pointer escapes the scope; do not print language `new` for handler temps.
 - Printed D uses libwasm lifetime hooks (`construct` / `onMount` / `onUnmount` / App `ready`). One `Spa!App`. Printed structs hang as `@child`. No Svelte JS `onMount`.
-- wasm-eh cell: no `.await`, keep `--foptimize-nothrow=false`. Do not `wasm-opt --asyncify` a `try_table` module. Landing pad and `libwasm_await__void` must not share a function.
+- wasm-eh cell: `wireAwait` `.await` (fork) or `.then` (stock); keep `--foptimize-nothrow=false`. Official post-link is Binaryen ≥123 `wasm-opt -Oz` / `-g -O0` with `--enable-exception-handling`. Official 123/132 still must not `--asyncify` `try_table`. Fork `binaryen-svelte-d` does. Landing pad must not wrap `libwasm_await__void`.
 - Kit features are accommodated in svelte-engine / libwasm / vibe.0. Compile integrates the current engine as svelte-engine-ws. svelte-d only prints that D IR.
 - `lang="d"` → libwasm D. `lang="ts"` → `src-ts/modules` `jsExports`. No crossing.
 - Pegged/libdparse never enter the wasm `dub.sdl`.
@@ -447,3 +449,6 @@ Pegged `asModule` vs scan; HMR port 3579 vs 3001; `bun install` in ws for Vite; 
 | 2026-08-15 | cfg | svelte-d.config.ts workspace → project-root svelte-engine-ws; drop generateSourceMap/capacitor |
 | 2026-08-15 | ldc | one LDC 1.43 for CLI/host/wasm; bunx svelte-d setup on win/mac/linux |
 | 2026-08-15 | docs | docs/ Nextra site: lang→D IR + simplified admin example |
+| 2026-08-15 | wasm-opt | Binaryen ≥123 official post-link: parse try_table, -Oz release / -g -O0 debug, never --asyncify; kit-admin ship 0.93 MiB / 224 KB gzip |
+| 2026-08-15 | binaryen | fork etcimon/binaryen; submodule binaryen/ branch svelte-d; Flatten try_table start; bun run build-wasm-opt |
+| 2026-08-15 | wasm-eh+ay | fork asyncify LDC try_table; eh_probe=1 on ship; throwBoundary IR; run-probes raw+asyncify |

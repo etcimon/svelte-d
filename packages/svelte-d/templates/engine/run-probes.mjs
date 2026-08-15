@@ -41,7 +41,22 @@ function wrapEnvWithStubs(env) {
 
 const dir = dirname(fileURLToPath(import.meta.url));
 const raw = join(dir, 'public', 'svelte-engine-raw.wasm');
-const buf = readFileSync(raw);
+const ship = join(dir, 'public', 'svelte-engine.wasm');
+const extra = process.argv.slice(2).filter((a) => a.endsWith('.wasm'));
+const targets = extra.length
+  ? extra
+  : [raw, ship].filter((p) => {
+      try {
+        readFileSync(p);
+        return true;
+      } catch {
+        return false;
+      }
+    });
+if (!targets.length) {
+  console.error('FAIL: no wasm (public/svelte-engine-raw.wasm)');
+  process.exit(1);
+}
 
 const abort = (what, file, line, msg) => {
   throw new Error(`ABORT: ${what} @ ${file}:${line} ${msg}`);
@@ -55,49 +70,76 @@ let env = { __cpp_exception: createCppExceptionTag() };
 installErrorHandling(env, decode, abort);
 env = wrapEnvWithStubs(env);
 
-const { instance } = await WebAssembly.instantiate(buf, { env });
-const mem = instance.exports.memory;
-if (mem && mem.grow) {
-  try {
-    mem.grow(64);
-  } catch {
-    /* already large */
-  }
-}
-
-function call(name) {
-  const fn = instance.exports[name];
-  if (typeof fn !== 'function') {
-    console.error(`FAIL: ${name} not exported`);
-    process.exit(1);
-  }
-  try {
-    return fn();
-  } catch (e) {
-    if (isWasmException(e)) {
-      console.error(`FAIL: ${name} threw WebAssembly.Exception (uncaught D throw)`);
-    } else {
-      console.error(`FAIL: ${name} threw`, e);
-    }
-    process.exit(1);
-  }
-}
-
-const eh = call('svelte_engine_eh_probe');
-if (eh !== 1) {
-  console.error('FAIL: svelte_engine_eh_probe returned', eh);
-  process.exit(1);
-}
-console.log('PASS: svelte_engine_eh_probe returned 1 (D catch ran)');
-
-const ph = call('svelte_engine_phobos_probe');
-if (ph !== 1) {
-  console.error(
-    'FAIL: svelte_engine_phobos_probe returned',
-    ph,
-    '(bitmask; -1 init, -2 uncaught)'
+async function runOne(path) {
+  const label = path.replace(/\\/g, '/').split('/').pop();
+  const buf = readFileSync(path);
+  const compiled = new WebAssembly.Module(buf);
+  const hasAy = WebAssembly.Module.exports(compiled).some(
+    (e) => e.name === 'asyncify_get_state'
   );
-  process.exit(1);
+  const got = await WebAssembly.instantiate(compiled, { env });
+  const instance = got instanceof WebAssembly.Instance ? got : got.instance;
+  const mem = instance.exports.memory;
+  if (mem && mem.grow) {
+    try {
+      mem.grow(64);
+    } catch {
+      /* already large */
+    }
+  }
+
+  function call(name) {
+    const fn = instance.exports[name];
+    if (typeof fn !== 'function') {
+      console.error(`FAIL: ${label} ${name} not exported`);
+      process.exit(1);
+    }
+    try {
+      return fn();
+    } catch (e) {
+      if (isWasmException(e)) {
+        console.error(
+          `FAIL: ${label} ${name} threw WebAssembly.Exception (uncaught D throw)`
+        );
+      } else {
+        console.error(`FAIL: ${label} ${name} threw`, e);
+      }
+      process.exit(1);
+    }
+  }
+
+  const eh = call('svelte_engine_eh_probe');
+  if (eh !== 1) {
+    console.error('FAIL:', label, 'svelte_engine_eh_probe returned', eh);
+    process.exit(1);
+  }
+  console.log(
+    'PASS:',
+    label,
+    'svelte_engine_eh_probe returned 1 (D catch ran)',
+    hasAy ? '[asyncify]' : '[raw]'
+  );
+
+  const ph = call('svelte_engine_phobos_probe');
+  if (ph !== 1) {
+    console.error(
+      'FAIL:',
+      label,
+      'svelte_engine_phobos_probe returned',
+      ph,
+      '(bitmask; -1 init, -2 uncaught)'
+    );
+    process.exit(1);
+  }
+  console.log(
+    'PASS:',
+    label,
+    'svelte_engine_phobos_probe returned 1 (Phobos + D catch)',
+    hasAy ? '[asyncify]' : '[raw]'
+  );
 }
-console.log('PASS: svelte_engine_phobos_probe returned 1 (Phobos + D catch)');
+
+for (const t of targets) {
+  await runOne(t);
+}
 process.exit(0);

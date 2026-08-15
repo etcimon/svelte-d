@@ -47,6 +47,7 @@ struct MkNode
 	string tag;
 	string text; /// text content, or each collection expr
 	string aliasName; /// each item alias, or await then-binding
+	string catchName; /// `{#await}` `{:catch e}`
 	string indexName; /// `{#each xs as x, i}`
 	string keyName; /// `{#each xs as x (key)}`
 	bool isMustache; /// text came from {ident}, not raw "Go"
@@ -533,6 +534,12 @@ private MkNode parseAwait(string src, ref size_t pos)
 		if (startsAt(src, pos, "{:catch"))
 		{
 			pos += 7;
+			while (pos < src.length && (src[pos] == ' ' || src[pos] == '\t'))
+				pos++;
+			auto c0 = pos;
+			while (pos < src.length && (isAlphaNum(src[pos]) || src[pos] == '_'))
+				pos++;
+			n.catchName = src[c0 .. pos];
 			while (pos < src.length && src[pos] != '}')
 				pos++;
 			if (pos < src.length)
@@ -562,6 +569,12 @@ private MkNode parseAwait(string src, ref size_t pos)
 		if (startsAt(src, pos, "{:catch"))
 		{
 			pos += 7;
+			while (pos < src.length && (src[pos] == ' ' || src[pos] == '\t'))
+				pos++;
+			auto c0 = pos;
+			while (pos < src.length && (isAlphaNum(src[pos]) || src[pos] == '_'))
+				pos++;
+			n.catchName = src[c0 .. pos];
 			while (pos < src.length && src[pos] != '}')
 				pos++;
 			if (pos < src.length)

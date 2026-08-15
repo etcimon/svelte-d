@@ -4,9 +4,9 @@
 
 Follow libwasm `BUILDING.md`, then this package’s `dub.sdl`.
 
-**Default cell is wasm-eh** (`configuration "application"` = LDC master / 1.43, `subConfiguration "libwasm" "ldc-master"`, copy-raw, no asyncify). Named alternates: `ldc-1.42`, `ldc-1.36`.
+**Default cell is wasm-eh** (`configuration "application"` = LDC master / 1.43, `subConfiguration "libwasm" "ldc-master"`, copy-raw then Binaryen ≥123 `wasm-opt` with EH features, no `--asyncify`). Named alternates: `ldc-1.42`, `ldc-1.36`.
 
-**Debug vs release.** `buildType "debug"` keeps symbols (name section + DWARF). `buildType "release"` is optimize + `lflags -strip-all`. `svelte-d wasm` / `svelte-d build` use release; `svelte-d wasm --debug` and `bun run dev` use debug. On the kit-admin tree that is 12.64 MiB debug wasm versus 1.59 MiB stripped. The host `webserver/dub.sdl` has the same pair (`--debug` default, `--release` + `/OPT:REF` on Windows).
+**Debug vs release.** `buildType "debug"` keeps symbols (name section + DWARF) and `wasm-opt -g -O0` still parses `try_table`. `buildType "release"` is optimize + `lflags -strip-all` then `wasm-opt -Oz --converge --strip-*`. `svelte-d wasm` / `svelte-d build` use release; `svelte-d wasm --debug` and `bun run dev` use debug. On the kit-admin tree that is 12.64 MiB debug wasm versus **0.93 MiB** / 224 KB gzipped shipped. The host `webserver/dub.sdl` has the same pair (`--debug` default, `--release` + `/OPT:REF` on Windows).
 
 **1. Compiler and conf.** Use LDC 1.36.0. BUILDING.md’s empty `post-switches` alone fails the dub platform probe (`cannot find object.d`). This workspace sets `post-switches = -I%%ldcbinarypath%%/../import-libwasm` and `-d-version=CRuntime_LIBWASM`. The junction `import-libwasm` → `libwasm/druntime-wasm`, so **`object.d` is libwasm’s**, not LDC `import/object.d`. `-defaultlib=` is already empty in the 1.36 Windows package.
 
@@ -66,11 +66,13 @@ config still blocked on pin `std.numeric` if gammafunction is compiled.
 
 **LDC master / 1.43 cell** (`--config=ldc-master --build=release`):
 `runtime-v1.43.0`, `--foptimize-nothrow=false`, no LTO, no `--asyncify`
-(Binaryen 132 Flatten.cpp UNREACHABLE on `try_table`). TS
-`error-handling.ts` installs `__cpp_exception` + abort-shaped
-`captureException`; `instantiate()` skips Asyncify when the module has
-no `asyncify_get_state`. `.await` is then a no-op unless JS logs
-(see svelte-D [AGENTS-D-IR-asyncify-wasm-eh.md](../../svelte-D/architecture/AGENTS-D-IR-asyncify-wasm-eh.md)).
+(Binaryen 123/132 Flatten.cpp UNREACHABLE on `try_table`). Binaryen ≥123
+*parses* `try_table`; `svelte-d wasm` runs `-Oz` / `-g -O0` with
+`--enable-exception-handling`. TS `error-handling.ts` installs
+`__cpp_exception` + abort-shaped `captureException`; `instantiate()`
+skips Asyncify when the module has no `asyncify_get_state`. `.await` is
+then a no-op unless JS logs (see svelte-D
+[AGENTS-D-IR-asyncify-wasm-eh.md](../../architecture/AGENTS-D-IR-asyncify-wasm-eh.md)).
 Probes: `slideshow_eh_probe` /
 `slideshow_phobos_probe` (`src-d/probe.d`). Runner:
 `build-ldc-master.ps1` then `node run-probes.mjs`.

@@ -38,7 +38,7 @@ libwasm live HEAD `64a97ce` / `v0.10.0` (2026-08-14); `AGENTS.md` pin `02f21a6` 
 - Emitted client D compiles in the selected wasm cell with `-fno-moduleinfo` and without stock `-Iimport`. (construction)
 - Export list includes `_start`, `domEvent`, `allocString`, `dumpApp`, `loadApp`, `__heap_base` when HMR is on (`dub.sdl:36-37` on **ldc-1.36**; `:26-27` is the 1.43 `library` config). (construction)
 - Generated client `dub.sdl` must emit `subConfiguration "libwasm" "ldc-1.36"` (and helper sub-configs) when `wasmCell=ldc-1.36`. Do not copy slideshow3dai `application`. (construction)
-- Do not asyncify a 1.43 `try_table` module (Binaryen 132 Flatten.cpp UNREACHABLE). (construction)
+- Do not `--asyncify` a 1.43 `try_table` module (Binaryen 123/132 Flatten.cpp UNREACHABLE). Official post-link is `wasm-opt -Oz` / `-g -O0` with `--enable-exception-handling`. (construction)
 - Do not print `.await` on the wasm-eh cell; use `JsPromise.then`. A function with a landing pad must not reach `libwasm_await__void`. ([AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md))
 - Do not invent a second handle table or a second `domEvent`. (construction of the ABI)
 - One generated file per component is convention (matches slideshow3dai). (convention)

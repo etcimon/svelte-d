@@ -9,7 +9,12 @@ import { existsSync, mkdirSync } from 'node:fs'
 import { spawnSync } from 'node:child_process'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { findDub, findLdc, setupPlatform } from '../packages/svelte-d/ts/platform.ts'
+import {
+  ensureOpensslForDub,
+  findDub,
+  findLdc,
+  setupPlatform,
+} from '../packages/svelte-d/ts/platform.ts'
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const compiler = join(root, 'packages', 'svelte-d')
@@ -57,6 +62,7 @@ async function buildNative(): Promise<void> {
         (!dub ? 'dub' : '')
     )
   }
+  ensureOpensslForDub()
   const st = run(dub, ['build', '--config=application', '--compiler=' + ldc2], compiler)
   if (st !== 0) throw new Error('dub build application failed status=' + st)
   if (!existsSync(exe)) {

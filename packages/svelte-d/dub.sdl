@@ -15,6 +15,7 @@ configuration "application" {
     targetPath "bin"
     mainSourceFile "source/app.d"
     dependency "vibe-0" version="~>1.2.0"
+    dependency "openssl" version="~>3.3.4" repository="git+https://github.com/etcimon/openssl.git"
     versions "VibeCustomMain" "DeimosOpenSSL_3_0"
     subConfiguration "openssl" "library-manual-link"
 }

@@ -15,12 +15,12 @@ tree — `bun add github:etcimon/svelte-d` ships a packaged copy, and
 From a dropped workspace, or this tree after `bunx svelte-d setup`:
 
 ```bash
-bunx svelte-d wasm --ws .            # release + lflags -strip-all
-bunx svelte-d wasm --ws . --debug    # symbols for IR work
+bunx svelte-d wasm --ws .            # release + strip-all + wasm-opt -Oz
+bunx svelte-d wasm --ws . --debug    # symbols for IR work (`wasm-opt -g -O0`)
 ```
 
 Or `dub build --arch=wasm32-unknown-wasi --compiler=ldc2 --config=application --build=release`.
-Probes: `svelte_engine_eh_probe` / `svelte_engine_phobos_probe`. No Binaryen asyncify on this cell.
+Probes: `svelte_engine_eh_probe` / `svelte_engine_phobos_probe` (`node run-probes.mjs`). Binaryen ≥123 parses `try_table` and `-Oz`s the ship module. The etcimon/binaryen fork also `--asyncify`s it; probes must still return 1 (D catch). Landing pad and `.await` stay in different functions. Kit-admin release is **0.93 MiB** / 224 KB gzipped.
 
 libwasm is `dependency "libwasm" version="~master"` from `github.com/etcimon/libwasm`.
 A live checkout is optional (`dub add-local`); otherwise DUB fetches.

@@ -10,9 +10,10 @@ workspace. `drop-ws` copies the **packaged** engine
 `node_modules` so a leftover Vite cannot lock the drop. `compile --project`
 overlays this package's `src/routes/admin` onto that dest. After print,
 `bun run dev` keeps **debug** wasm/host (symbols, no strip). `bun run build`
-is **release + `lflags -strip-all`** for both cells and writes debug vs
-release sizes to `svelte-engine-ws/.svelte-d/artifact-sizes.json`. The
-engine is not the app.
+is **release + `lflags -strip-all`** for both cells, then Binaryen ≥123
+`wasm-opt -Oz` on the wasm-eh module, and writes debug vs release sizes
+to `svelte-engine-ws/.svelte-d/artifact-sizes.json`. Shipped wasm on this
+tree is **0.93 MiB** / 224 KB gzipped. The engine is not the app.
 
 - kit tree `src/routes/admin` printed to libwasm D IR
 - derived `debug-map.json` + `rewriteStack` (D IR → `.svelte`)
@@ -30,7 +31,7 @@ missing Chromium/Firefox skips those smokes.
 ```
 bun test
 bun run dev          # debug wasm/host, vite, vibe.0 logs
-bun run build        # release + strip-all; print debug vs release sizes
+bun run build        # release + strip-all + wasm-opt -Oz; print sizes
 bun run dev --chrome
 bun run dev --firefox
 ```

@@ -42,11 +42,11 @@ void usage()
 	writeln("  svelte-d lodash               # list libwasm.lodash methods");
 	writeln("  svelte-d kit-routes [--ws DIR]");
 	writeln("  svelte-d wasm [--ws DIR] [--debug|--release] [--probes] [--force]");
-	writeln("      wasm cell; default --release (optimize + lflags -strip-all). --debug keeps symbols.");
+	writeln("      wasm cell; default --release (optimize + lflags -strip-all + wasm-opt -Oz). --debug keeps symbols.");
 	writeln("  svelte-d host [--ws DIR] [--debug|--release]");
 	writeln("      vibe.0 host; default --debug. --release is optimize + strip.");
 	writeln("  svelte-d build [--ws DIR] [--project DIR]  # compile IR + wasm/host --release");
-	writeln("  svelte-d setup                       # find LDC 1.43 + vibe.0 + libwasm");
+	writeln("  svelte-d setup                       # find LDC 1.43 + Binaryen ≥123 + vibe.0 + libwasm");
 	writeln("  svelte-d version");
 }
 
@@ -241,8 +241,11 @@ int main(string[] args)
 		{
 			import svelte_d.workspace.ldc;
 
+			import svelte_d.workspace.wasm_build : findWasmOpt;
+
 			auto ldc = findLdc();
 			auto dub = findDub(ldc);
+			auto wopt = findWasmOpt();
 			string lw;
 			try
 				lw = findLibwasmRoot();
@@ -254,6 +257,7 @@ int main(string[] args)
 			ensureHostAddLocals();
 			writeln("ldc\t", ldc.length ? ldc : "(missing — bunx svelte-d setup downloads 1.43)");
 			writeln("dub\t", dub.length ? dub : "(missing)");
+			writeln("wasm-opt\t", wopt.length ? wopt : "(missing — bunx svelte-d setup downloads fork wasm-opt)");
 			writeln("libwasm\t", lw.length ? lw : "(dub fetch ~master on first wasm build)");
 			writeln("vibe.0\t", v0.length ? v0 : "(dub registry vibe-0 on first host build)");
 			return ldc.length && dub.length ? 0 : 3;

@@ -11,7 +11,8 @@ import libwasm.array;
 {{IMPORTS}}
 // Module nothrow matches engine goldens. wasm-eh cells must compile with
 // --foptimize-nothrow=false or D try/catch landing pads are deleted.
-// Do not print .await in a function that also try/catches (asyncify vs try_table).
+// .await is allowed in wireAwait; do not wrap it in try/catch (landing pad
+// is throwBoundary / a helper after rewind, never around the import).
 // Author `import std.*` is wasm Phobos (spa-phobos cell), lifted above nothrow.
 nothrow:
 @safe:

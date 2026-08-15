@@ -209,6 +209,32 @@ describe('Svelte language features: DevTools diagnosis', () => {
           expect(settled.comboDone).toBe(true)
           expect(settled.comboWait).toBe(false)
           assertNoDevtoolsFaults(sink, '{#await} ready wireAwait then')
+          const ay = await page.evaluate(() => {
+            const w = window as unknown as {
+              __svelteDRewriteError?: (e: unknown) => string
+              __svelteDLastAwait?: { failed?: boolean; reason?: string }
+              libwasm?: { awaitSupported?: boolean; instance?: { exports?: Record<string, unknown> } }
+            }
+            const rewrite =
+              typeof w.__svelteDRewriteError === 'function'
+                ? w.__svelteDRewriteError({
+                    stack: 'at wireAwait (wasm://wasm/x)\nwasm-function[4]\nasyncify_start_unwind',
+                  })
+                : ''
+            const ex = w.libwasm && w.libwasm.instance && w.libwasm.instance.exports
+            return {
+              rewriteError: typeof w.__svelteDRewriteError === 'function',
+              lastAwait: !!w.__svelteDLastAwait,
+              awaitSupported: !!(w.libwasm && w.libwasm.awaitSupported),
+              hasAsyncify: !!(ex && typeof ex.asyncify_get_state === 'function'),
+              rewrite,
+            }
+          })
+          expect(ay.rewriteError).toBe(true)
+          expect(ay.lastAwait).toBe(true)
+          expect(ay.rewrite).toMatch(/\[async-wasm\]/)
+          expect(ay.rewrite).toMatch(/\[asyncify\]/)
+          if (ay.hasAsyncify) expect(ay.awaitSupported).toBe(true)
         }
         if (boot.comboWide.length)
           expect(boot.comboWideShown).toBe(true)

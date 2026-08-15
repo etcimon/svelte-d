@@ -18,7 +18,14 @@ export const AWAIT_CASES: AwaitCase[] = [
   {
     id: 'pend',
     dest: 'ComboCover',
-    needles: ['await_pending = true', 'void wireAwait()', '@style!"await-pend"'],
+    needles: [
+      'await_pending = true',
+      'void wireAwait()',
+      'import await_status',
+      'libwasmAwaitSupported()',
+      '.await',
+      '@style!"await-pend"',
+    ],
     boot: 1,
     go: 0,
     fail: 0,
@@ -27,11 +34,11 @@ export const AWAIT_CASES: AwaitCase[] = [
   {
     id: 'then',
     dest: 'ComboCover',
-    needles: ['await_then = false', '@style!"await-then"'],
+    needles: ['await_then = false', 'libwasmAwaitFailed()', '@style!"await-then"'],
     boot: 0,
     go: 1,
     fail: 0,
-    note: 'wireAwait / Go shows {:then}',
+    note: 'wireAwait .await / Go shows {:then}',
   },
   {
     id: 'catch',

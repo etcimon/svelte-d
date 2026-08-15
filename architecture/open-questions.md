@@ -28,7 +28,7 @@ Closing one is a note edit plus, if it affects a Key Decision, an edit to the lo
 ## Runtimes (unverified facts — do not treat as closed)
 
 5. vibe.0 `dub build` **has not been green** on this host (abs `libs-windows-*`, patched OpenSSL, Botan).
-6. LDC 1.43 + Binaryen 132 `--asyncify` **fails** (`try_table` / Flatten.cpp UNREACHABLE). Closed as construction for svelte-d: do not compose them; see [AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md). Whether `asyncify-remove-list` of EH symbols avoids Flatten remains unrun (`wasm-opt` not on PATH).
+6. LDC 1.43 + stock Binaryen 123/132 `--asyncify` **fails** (`try_table` / Flatten.cpp UNREACHABLE). Fork: `https://github.com/etcimon/binaryen` branch `svelte-d` (submodule `binaryen/`) starts Flatten `try_table` (keep catch dest types, flatten body). Official ship path stays `-Oz` until the fork wasm-opt is proven on kit-admin + `spa-wasm-eh`. See [AGENTS-D-IR-asyncify-wasm-eh.md](AGENTS-D-IR-asyncify-wasm-eh.md).
 7. slideshow3dai `navbar.d` `Exception` + PgLite JSON vs 1.36 `--wasm-enable-eh` untested.
 8. libwasm `yarn dev` / full browser cell marked unrun in that clone’s `open-questions.md`.
 9. `wasm-opt` 132 vs vendored `asyncify.ts` agreement — slideshow3dai lists this as open; 1.42 cell was validated 2026-08-13.

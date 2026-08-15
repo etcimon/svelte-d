@@ -135,17 +135,22 @@ export function isWasmUrl(url: string | undefined): boolean {
 }
 
 const WASM_AT = /\bat\s+(\S+)\s+\((wasm:\/\/[^)]+)\)/g
+const WASM_FN = /\bwasm-function\[(\d+)\]/g
+const ASYNCIFY_FN = /\basyncify_(?:start|stop)_(?:un)?wind\b/g
 
 /** Rewrite one stack. Unmapped frames stay verbatim. Never invents orig. */
 export function rewriteStack(map: DebugMap, stack: string): string {
   if (!stack) return stack
   const colon = stack.replace(FRAME, (all, file: string, ln: string) => appendOrig(map, all, file, ln))
   const ldc = colon.replace(LDC_FRAME, (all, file: string, ln: string) => appendOrig(map, all, file, ln))
-  return ldc.replace(WASM_AT, (all, fn: string, url: string) => {
+  const wasm = ldc.replace(WASM_AT, (all, fn: string, url: string) => {
     const e = lookupWasmOrig(map, fn)
     if (!e) return all
     return `${all} [svelte ${e.orig}:${e.origLine} kind=${e.kind}]`
   })
+  return wasm
+    .replace(WASM_FN, (all) => (all.includes('[async-wasm]') ? all : `${all} [async-wasm]`))
+    .replace(ASYNCIFY_FN, (all) => (all.includes('[asyncify]') ? all : `${all} [asyncify]`))
 }
 
 export type DevtoolsFrame = {
