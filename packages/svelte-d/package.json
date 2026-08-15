@@ -1,6 +1,6 @@
 {
   "name": "svelte-d",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "type": "module",
   "description": "Importable svelte-d: TypeScript API over native exe + dynamic lib (bun:ffi). Kit syntax falls through to libwasm/vibe.0 in an equivalent svelte-engine-ws tree.",

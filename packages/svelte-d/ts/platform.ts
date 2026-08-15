@@ -49,6 +49,9 @@ export const MIN_WASM_OPT_VERSION = 123
 /** Rolling GitHub Release tag for the etcimon/binaryen wasm-opt CI builds. */
 export const DEFAULT_WASM_OPT_RELEASE =
   process.env.SVELTE_D_WASM_OPT_RELEASE || 'wasm-opt-svelte-d'
+/** Git tag on etcimon/binaryen (branch svelte-d) for this svelte-d increment. */
+export const BINARYEN_FORK_TAG =
+  process.env.SVELTE_D_BINARYEN_TAG || 'svelte-d-v0.2.0'
 export const DEFAULT_WASM_OPT_REPO =
   process.env.SVELTE_D_WASM_OPT_REPO || 'etcimon/svelte-d'
 export const OPENSSL_GIT =
