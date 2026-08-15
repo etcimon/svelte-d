@@ -1,6 +1,6 @@
 {
   "name": "svelte-d",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "private": false,
   "type": "module",
   "description": "Svelte / SvelteKit → libwasm / vibe.0. bun install builds the svelte-d CLI.",
@@ -29,6 +29,7 @@
   },
   "files": [
     "bin",
+    "dub.sdl",
     "scripts",
     "packages/svelte-d/ts",
     "packages/svelte-d/source",
