@@ -49,6 +49,9 @@ export const MIN_WASM_OPT_VERSION = 123
 /** Rolling GitHub Release tag for the etcimon/binaryen wasm-opt CI builds. */
 export const DEFAULT_WASM_OPT_RELEASE =
   process.env.SVELTE_D_WASM_OPT_RELEASE || 'wasm-opt-svelte-d'
+/** Branch that holds wasm-opt-<triple>.tar.gz when the Release is missing. */
+export const DEFAULT_WASM_OPT_BINARIES_BRANCH =
+  process.env.SVELTE_D_WASM_OPT_BRANCH || 'wasm-opt-binaries'
 /** Git tag on etcimon/binaryen (branch svelte-d) for this svelte-d increment. */
 export const BINARYEN_FORK_TAG =
   process.env.SVELTE_D_BINARYEN_TAG || 'svelte-d-v0.2.0'
@@ -428,6 +431,20 @@ export function forkedWasmOptDownloadUrl(
   return `https://github.com/${repo}/releases/download/${tag}/wasm-opt-${variant}.tar.gz`
 }
 
+/** Release first, then the wasm-opt-binaries branch (raw + git raw). */
+export function forkedWasmOptDownloadUrls(
+  variant = binaryenBuildVariant(),
+  repo = DEFAULT_WASM_OPT_REPO,
+  tag = DEFAULT_WASM_OPT_RELEASE,
+  branch = DEFAULT_WASM_OPT_BINARIES_BRANCH
+): string[] {
+  return [
+    forkedWasmOptDownloadUrl(variant, repo, tag),
+    `https://github.com/${repo}/raw/${branch}/wasm-opt-${variant}.tar.gz`,
+    `https://raw.githubusercontent.com/${repo}/${branch}/wasm-opt-${variant}.tar.gz`,
+  ]
+}
+
 /** Parse `wasm-opt --version` (`wasm-opt version 123 (version_123)`). */
 export function parseWasmOptVersion(text: string): number {
   if (!text) return 0
@@ -717,12 +734,26 @@ export async function downloadForkedWasmOpt(
     return destBin
   }
   mkdirSync(destDir, { recursive: true })
-  const url = forkedWasmOptDownloadUrl(variant)
-  const archive = join(tmpdir(), basename(url))
-  console.log('svelte-d: downloading', url)
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`forked wasm-opt download failed ${res.status} ${url}`)
-  writeFileSync(archive, Buffer.from(await res.arrayBuffer()))
+  const urls = forkedWasmOptDownloadUrls(variant)
+  let archive = ''
+  let lastErr = ''
+  for (const url of urls) {
+    console.log('svelte-d: downloading', url)
+    try {
+      const res = await fetch(url)
+      if (!res.ok) {
+        lastErr = `${res.status} ${url}`
+        continue
+      }
+      archive = join(tmpdir(), basename(url.split('?')[0] || url))
+      writeFileSync(archive, Buffer.from(await res.arrayBuffer()))
+      lastErr = ''
+      break
+    } catch (e) {
+      lastErr = e instanceof Error ? e.message : String(e)
+    }
+  }
+  if (!archive) throw new Error(`forked wasm-opt download failed: ${lastErr}`)
   const r = spawnSync('tar', ['-xzf', archive, '-C', destDir], {
     stdio: 'inherit',
     shell: false,

@@ -12,6 +12,7 @@ svelte-engine-ws/
 # CI / setup-placed wasm-opt triples (LICENSE + README stay)
 binaryen-build/*/
 binaryen-build/dist/
+.wasm-opt-binaries-work/
 
 # Built compiler
 packages/svelte-d/bin/

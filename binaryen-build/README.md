@@ -2,7 +2,7 @@
 
 Prebuilt `wasm-opt` from the [etcimon/binaryen](https://github.com/etcimon/binaryen) `svelte-d` fork (Flatten + Asyncify on wasm `try_table`).
 
-`bunx svelte-d setup` downloads the matching host triple here, the same way it fetches LDC 1.43 into `~/.svelte-d/toolchains`. CI (`.github/workflows/wasm-opt.yml`) compiles the `binaryen/` submodule on Linux, macOS, and Windows and publishes the archives as the `wasm-opt-svelte-d` GitHub Release.
+`bunx svelte-d setup` downloads the matching host triple here, the same way it fetches LDC 1.43 into `~/.svelte-d/toolchains`. CI (`.github/workflows/wasm-opt.yml`) compiles the `binaryen/` submodule and publishes `wasm-opt-<triple>.tar.gz` to the **`wasm-opt-binaries`** branch (and the rolling `wasm-opt-svelte-d` GitHub Release). Setup tries the release first, then that branch.
 
 ```
 binaryen-build/

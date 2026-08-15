@@ -15,6 +15,7 @@ import {
   findWasmOpt,
   forkedWasmOptHome,
   forkedWasmOptDownloadUrl,
+  forkedWasmOptDownloadUrls,
   hostTriple,
   DEFAULT_WASM_OPT_RELEASE,
   isForkedWasmOpt,
@@ -117,6 +118,9 @@ describe('Binaryen ≥123 wasm-opt (try_table parse, no asyncify)', () => {
     expect(binaryenBuildVariant('darwin', 'x64')).toBe('darwin-x86_64')
     expect(forkedWasmOptDownloadUrl('linux-x86_64')).toBe(
       'https://github.com/etcimon/svelte-d/releases/download/wasm-opt-svelte-d/wasm-opt-linux-x86_64.tar.gz'
+    )
+    expect(forkedWasmOptDownloadUrls('linux-x86_64')).toContain(
+      'https://github.com/etcimon/svelte-d/raw/wasm-opt-binaries/wasm-opt-linux-x86_64.tar.gz'
     )
     expect(DEFAULT_WASM_OPT_RELEASE).toBe('wasm-opt-svelte-d')
     expect(isForkedWasmOpt('/tmp/binaryen-build/linux-x86_64/wasm-opt')).toBe(true)

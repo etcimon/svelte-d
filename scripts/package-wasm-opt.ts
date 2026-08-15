@@ -74,13 +74,17 @@ if (existsSync(licenseSrc)) {
   copyFileSync(licenseSrc, join(destDir, 'LICENSE'))
 }
 
-const archive = join(distDir, `wasm-opt-${variant}.tar.gz`)
-const tar = spawnSync(
-  'tar',
-  ['-czf', archive, '-C', destDir, exe, ...(existsSync(join(destDir, 'LICENSE')) ? ['LICENSE'] : [])],
-  { stdio: 'inherit', shell: false }
-)
-if ((tar.status ?? 1) !== 0) {
+// Relative archive path: Git bash tar on Windows treats `D:` as a remote host
+// (`Cannot connect to D: resolve failed`).
+const archiveName = `wasm-opt-${variant}.tar.gz`
+const members = [exe, ...(existsSync(join(destDir, 'LICENSE')) ? ['LICENSE'] : [])]
+const tar = spawnSync('tar', ['-czf', join('..', 'dist', archiveName), ...members], {
+  cwd: destDir,
+  stdio: 'inherit',
+  shell: false,
+})
+const archive = join(distDir, archiveName)
+if ((tar.status ?? 1) !== 0 || !existsSync(archive)) {
   console.error('tar failed for', archive)
   process.exit(1)
 }
