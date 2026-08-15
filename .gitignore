@@ -3,6 +3,11 @@ svelte-engine-ws/
 **/.svelte-d/
 **/.dub/
 **/node_modules/
+# Ingest fixture: a fake npm svelte package under node_modules/.
+!packages/svelte-kit-d/test/fixtures/
+!packages/svelte-kit-d/test/fixtures/**
+!packages/svelte-kit-d/test/fixtures/**/node_modules/
+!packages/svelte-kit-d/test/fixtures/**/node_modules/**
 
 # CI / setup-placed wasm-opt triples (LICENSE + README stay)
 binaryen-build/*/
